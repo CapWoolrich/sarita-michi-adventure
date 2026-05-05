@@ -127,7 +127,7 @@ export default function CatHunt3D() {
   const [settings, setSettings] = useState(() => safeRead('settings', { look: 'media', quality: 'normal' }));
   const mountRef = useRef(null); const gameRef = useRef(null); const timerRef = useRef(null); const pendingLevelRef = useRef(null);
   const touchState = useRef({ joy: { active: false, pointerId: null, x: 0, y: 0 }, look: { active: false, pointerId: null, lastX: 0, lastY: 0, dx: 0, dy: 0 } });
-  const audioRef = useRef({ started: false, meow: null, success: null });
+  const audioRef = useRef({ started: false, sounds: {} });
   const isMobile = useMemo(() => /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent), []);
 
   useEffect(() => localStorage.setItem('bestScore', JSON.stringify(bestScore)), [bestScore]);
@@ -151,7 +151,31 @@ export default function CatHunt3D() {
   const stopGame = useCallback(() => { if (timerRef.current) clearInterval(timerRef.current); timerRef.current = null; if (document.pointerLockElement) document.exitPointerLock?.(); const g = gameRef.current; if (!g) { if (mountRef.current) mountRef.current.innerHTML=''; return; } g.running = false; if (g.rafId) cancelAnimationFrame(g.rafId); window.removeEventListener('resize', g.onResize); window.removeEventListener('keydown', g.onKeyDown); window.removeEventListener('keyup', g.onKeyUp); window.removeEventListener('mousemove', g.onMouseMove); window.removeEventListener('click', g.onClick); window.removeEventListener('pointerlockchange', g.onPointerLockChange); g.scene.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) Array.isArray(o.material) ? o.material.forEach((m) => m.dispose()) : o.material.dispose(); }); g.renderer.dispose(); g.renderer.domElement?.remove(); if (mountRef.current) mountRef.current.innerHTML=''; gameRef.current = null; }, []);
   useEffect(() => () => { if (rescueToastTimeoutRef.current) clearTimeout(rescueToastTimeoutRef.current); stopGame(); }, [stopGame]);
 
-  const initAudio = useCallback(async () => { if (audioRef.current.started) return; try { await Tone.start(); audioRef.current.meow = new Tone.Synth().toDestination(); audioRef.current.success = new Tone.PolySynth(Tone.Synth).toDestination(); audioRef.current.started = true; } catch {} }, []);
+  const initAudio = useCallback(async () => {
+    if (audioRef.current.started) return;
+    try {
+      await Tone.start();
+      audioRef.current.sounds = {
+        tap: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.002, decay: 0.08, sustain: 0, release: 0.12 } }).toDestination(),
+        meowAppear: new Tone.Synth({ oscillator: { type: 'triangle' } }).toDestination(),
+        meowCatch: new Tone.PolySynth(Tone.Synth).toDestination(),
+        sparkle: new Tone.FMSynth().toDestination(),
+        levelComplete: new Tone.PolySynth(Tone.Synth).toDestination(),
+        nextLevel: new Tone.Synth({ oscillator: { type: 'sine' } }).toDestination()
+      };
+      audioRef.current.started = true;
+    } catch {}
+  }, []);
+  const playSfx = useCallback((name) => {
+    if (mute || !audioRef.current.started) return;
+    const s = audioRef.current.sounds;
+    if (name === 'tap') s.tap?.triggerAttackRelease('E6', '32n');
+    if (name === 'meowAppear') s.meowAppear?.triggerAttackRelease('A4', '16n');
+    if (name === 'meowCatch') s.meowCatch?.triggerAttackRelease(['C5', 'E5', 'A5'], '8n');
+    if (name === 'sparkle') s.sparkle?.triggerAttackRelease('D6', '32n');
+    if (name === 'levelComplete') s.levelComplete?.triggerAttackRelease(['C5', 'G5', 'C6'], '4n');
+    if (name === 'nextLevel') s.nextLevel?.triggerAttackRelease('G5', '16n');
+  }, [mute]);
 
   const setupLevel = useCallback((idx) => {
     const mount = mountRef.current; if (!mount) return; stopGame(); mount.innerHTML = '';
@@ -189,7 +213,7 @@ export default function CatHunt3D() {
         showRescueToast(`¡Rescataste a ${p.name}! · ${p.personality} 🌸`); setFound((f) => f + 1); setScore((s) => s + 120);
         unlockAchievement('first', 'Primer rescate'); if ((rescuedMichis.length + 1) >= 5) unlockAchievement('five', 'Amiga de los michis');
         const ring = new THREE.Mesh(new THREE.TorusGeometry(.35,.03,8,24), new THREE.MeshBasicMaterial({ color:'#ff6b9d', transparent:true, opacity:.9 })); ring.position.copy(best.position); ring.rotation.x=Math.PI/2; scene.add(ring); best.userData.ring=ring; best.userData.ringBorn=performance.now();
-        if (audioRef.current.success && !mute) audioRef.current.success.triggerAttackRelease(['C5', 'E5', 'G5'], '8n');
+        playSfx('meowCatch'); playSfx('sparkle');
       }
     };
 
@@ -223,11 +247,11 @@ export default function CatHunt3D() {
         if (c.userData.found && c.visible){ c.position.y += .04; c.scale.multiplyScalar(.975); if(c.scale.x<.1)c.visible=false; }
       });
       setHint(min < 2.2 ? '¡Aquí mismo!' : min < 5.5 ? 'Muy cerca...' : min < 10 ? 'Escucho un maullido...' : 'Explora la zona');
-      if (min < 7 && audioRef.current.meow && !mute && Math.random() < 0.014) audioRef.current.meow.triggerAttackRelease('A4', '16n');
+      if (min < 7 && Math.random() < 0.014) playSfx('meowAppear');
     } renderer.render(scene, camera); gameRef.current.rafId = requestAnimationFrame(animate); };
     animate();
     timerRef.current = setInterval(() => setTimeLeft((t) => (!paused && screen === 'playing' ? Math.max(0, t - 1) : t)), 1000);
-  }, [isMobile, mute, paused, rescuedMichis.length, screen, settings, stopGame]);
+  }, [isMobile, paused, rescuedMichis.length, screen, settings, stopGame, playSfx]);
 
   useEffect(() => {
     if (screen !== 'playing' || pendingLevelRef.current == null) return undefined;
@@ -248,7 +272,7 @@ export default function CatHunt3D() {
   }, [screen, setupLevel]);
 
   useEffect(() => { if (timeLeft === 0 && screen === 'playing') { pendingLevelRef.current = null; setScreen('gameover'); stopGame(); } }, [timeLeft, screen, stopGame]);
-  useEffect(() => { if (screen === 'playing' && found >= LEVELS[levelIndex].cats) { if (timeLeft > 30) unlockAchievement('fast', 'Rescatista veloz'); const total = score + timeLeft * 10; setScore(total); setBestScore((b) => Math.max(b, total)); setCompletedLevels((c) => [...new Set([...c, levelIndex])]); const next = Math.min(levelIndex + 1, LEVELS.length - 1); setMaxUnlockedLevel((m) => Math.max(m, next)); pendingLevelRef.current = null; stopGame(); setScreen(levelIndex === LEVELS.length - 1 ? 'complete' : 'levelComplete'); if (levelIndex === LEVELS.length - 1) unlockAchievement('legend', 'Leyenda estrellada'); } }, [found, levelIndex, score, screen, stopGame, timeLeft]);
+  useEffect(() => { if (screen === 'playing' && found >= LEVELS[levelIndex].cats) { if (timeLeft > 30) unlockAchievement('fast', 'Rescatista veloz'); const total = score + timeLeft * 10; setScore(total); setBestScore((b) => Math.max(b, total)); setCompletedLevels((c) => [...new Set([...c, levelIndex])]); const next = Math.min(levelIndex + 1, LEVELS.length - 1); setMaxUnlockedLevel((m) => Math.max(m, next)); pendingLevelRef.current = null; stopGame(); playSfx('levelComplete'); setScreen(levelIndex === LEVELS.length - 1 ? 'complete' : 'levelComplete'); if (levelIndex === LEVELS.length - 1) unlockAchievement('legend', 'Leyenda estrellada'); } }, [found, levelIndex, score, screen, stopGame, timeLeft, playSfx]);
 
   const startLevel = async (idx, reset = false) => {
     await initAudio();
@@ -274,15 +298,17 @@ export default function CatHunt3D() {
 
     {screen === 'playing' && <>
       <div ref={mountRef} style={{ position: 'fixed', inset: 0 }} />
+      <div className="level-world-backdrop" aria-hidden="true"><div className="rainbow-horizon"/><div className="kawaii-hills"/><div className="magical-lake"/><div className="floating-clouds"/><div className="sparkle-particles"/></div>
+      <div className="sarita-character" aria-hidden="true"><span className="head"/><span className="body"/><span className="shadow"/></div>
       <div style={{ position: 'fixed', top: 8, left: 8, right: 8, display: 'flex', gap: 8, flexWrap: 'wrap', zIndex: 20 }}><Badge> Nivel: {LEVELS[levelIndex].name}</Badge><Badge>Michis: {found}/{LEVELS[levelIndex].cats}</Badge><Badge>Tiempo: {timeLeft}s</Badge><Badge>Score: {score}</Badge><button onClick={() => setMute((m) => !m)}>{mute ? '🔇' : '🔊'}</button><button onClick={() => setPaused((p) => !p)}>{paused ? '▶️' : '⏸️'}</button><button onClick={() => { setScreen('menu'); stopGame(); }}>🏠</button></div>
       {isMobile && <MobileControls touchState={touchState} onCatch={() => gameRef.current?.tryCatchCat?.()} />}
-      {!isMobile && <button onClick={() => gameRef.current?.tryCatchCat?.()} style={{ position: 'fixed', right: 14, bottom: 14, zIndex: 25 }}>🌈 Atrapar</button>}
+      {!isMobile && <button className="catch-btn" onClick={() => { playSfx('tap'); gameRef.current?.tryCatchCat?.(); }} style={{ position: 'fixed', right: 14, bottom: 14, zIndex: 25 }}>🐾 Atrapar gatito</button>}
       <div style={{ position: 'fixed', bottom: 16, left: 0, right: 0, textAlign: 'center', color: '#fff', fontWeight: 700, textShadow: '0 2px 6px #000' }}>{hint}</div>
       {rescueToast && <div style={{ position: 'fixed', top: '18%', left: '50%', transform: 'translateX(-50%)', zIndex: 22, background: 'rgba(255,105,173,.88)', color: '#fff', padding: '8px 12px', borderRadius: 999, pointerEvents: 'none', animation: 'fadeToast 1.4s ease forwards' }}>{rescueToast}</div>}
       {paused && <Panel title='Juego en pausa'><button onClick={() => setPaused(false)}>Continuar</button><button onClick={() => startLevel(levelIndex)}>Reiniciar nivel</button><button onClick={() => { setScreen('menu'); stopGame(); }}>Menú</button></Panel>}
     </>}
 
-    {screen === 'levelComplete' && <Panel title='¡Nivel completado!'><SaritaMascot /><p>{LEVEL_STORY[Math.min(levelIndex + 1, LEVEL_STORY.length - 1)]}</p><p>Encontraste a:</p>{lastFoundProfiles.map((p) => <div key={p.id}>🐱 {p.name} — {p.personality}</div>)}<button onClick={() => startLevel(levelIndex + 1)}>Siguiente nivel</button></Panel>}
+    {screen === 'levelComplete' && <div className="level-complete-shell"><div className="level-complete-card"><div className="lc-scroll"><div><h2>¡Nivel completado!</h2><p>{LEVEL_STORY[Math.min(levelIndex + 1, LEVEL_STORY.length - 1)]}</p><p className="lc-world">🌎 {LEVELS[Math.min(levelIndex + 1, LEVELS.length - 1)].name}</p></div><div><h3>Gatitos encontrados</h3>{lastFoundProfiles.map((p) => <div key={p.id} className="lc-cat">🐱 {p.name} — {p.personality}</div>)}</div></div><div className="lc-footer"><button className="next-btn" onClick={() => { playSfx('nextLevel'); startLevel(levelIndex + 1); }}>Siguiente nivel</button></div></div></div>}
     {screen === 'complete' && <Panel title='Misión completa ✨'><SaritaMascot /><p>Puntuación final: {score}</p><button onClick={() => startLevel(0, true)}>Jugar de nuevo</button></Panel>}
     {screen === 'gameover' && <Panel title='Game Over'><button onClick={() => startLevel(levelIndex)}>Reintentar</button><button onClick={() => setScreen('menu')}>Menú</button></Panel>}
     {achievementToast && <div style={{ position: 'fixed', top: 70, right: 12, zIndex: 40, background: 'rgba(255,255,255,.92)', padding: '10px 12px', borderRadius: 12 }}>{achievementToast}</div>}
@@ -442,6 +468,32 @@ const cssSkin = `
 @media (orientation:landscape) and (max-height:500px){.premium-start{padding:2px}.premium-card{width:min(1180px,99vw);min-height:calc(100dvh - 18px);grid-template-columns:1.05fr .85fr;padding:clamp(10px,2.6vh,16px);gap:10px;border-radius:24px}.copy-panel h1{font-size:clamp(1.85rem,8.3vh,3.05rem);line-height:.9}.tiny-badge{display:none}.start-subtitle{font-size:.82rem;padding:6px 10px;margin-top:7px}.start-cta{min-height:46px;margin-top:9px;font-size:clamp(1rem,4.7vh,1.32rem)}.start-actions{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:8px}.start-action{min-height:38px;font-size:clamp(.72rem,3.4vh,.92rem);padding:7px 8px;gap:6px}.hero-illustration{min-height:calc(100dvh - 54px);border-radius:20px}.hero-svg{max-height:calc(100dvh - 34px)}.founders-badge{bottom:4px;font-size:.74rem;padding:6px 12px}.premium-card::before{inset:7px;border-radius:18px}}
 @media (max-width:820px) and (orientation:portrait){.premium-start{align-items:start}.premium-card{grid-template-columns:1fr;min-height:auto;padding:18px 14px 42px}.hero-illustration{order:-1;min-height:260px}.copy-panel h1{font-size:clamp(2rem,12vw,3.5rem)}.start-actions{grid-template-columns:1fr}.founders-badge{bottom:10px}}
 @media (max-width:560px){.start-actions{grid-template-columns:1fr}.start-action{justify-content:flex-start}.start-subtitle{border-radius:20px}.founders-badge{font-size:.76rem}}
+
+.catch-btn{min-height:56px;min-width:140px;padding:12px 20px;border:0;border-radius:999px;background:linear-gradient(180deg,#ffb3ea,#ff78c8 52%,#e44cb2);color:#fff;font-weight:900;box-shadow:0 14px 30px rgba(228,76,178,.45),0 0 0 3px rgba(255,255,255,.35) inset;animation:catchBreath 2.6s ease-in-out infinite;transform-origin:center}
+.catch-btn.mobile{min-width:120px;font-size:1rem}
+.catch-btn:active{transform:scale(.95)}
+@keyframes catchBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+.level-world-backdrop{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+.rainbow-horizon{position:absolute;left:10%;right:10%;bottom:34%;height:120px;border-radius:120px 120px 0 0;background:radial-gradient(120% 120% at 50% 100%,transparent 46%,#ffd88e 46% 52%,#ff9fd2 52% 58%,#9fd4ff 58% 64%,#c8b3ff 64% 70%,transparent 70%)}
+.kawaii-hills{position:absolute;left:-10%;right:-10%;bottom:22%;height:170px;background:radial-gradient(40% 100% at 20% 100%,#b0e6b8 0 70%,transparent 72%),radial-gradient(40% 100% at 50% 100%,#c4efcb 0 70%,transparent 72%),radial-gradient(40% 100% at 80% 100%,#a8dfbc 0 70%,transparent 72%);opacity:.8}
+.magical-lake{position:absolute;left:14%;right:14%;bottom:14%;height:16%;border-radius:999px;background:linear-gradient(180deg,rgba(170,220,255,.8),rgba(126,182,250,.75));box-shadow:inset 0 6px 24px rgba(255,255,255,.5)}
+.floating-clouds,.sparkle-particles{position:absolute;inset:0;background-repeat:repeat;animation:panSky 70s linear infinite}
+.floating-clouds{background-image:radial-gradient(circle at 10% 20%,rgba(255,255,255,.7) 0 18px,transparent 20px),radial-gradient(circle at 60% 35%,rgba(255,255,255,.6) 0 22px,transparent 24px),radial-gradient(circle at 85% 15%,rgba(255,255,255,.56) 0 16px,transparent 18px)}
+.sparkle-particles{animation-duration:35s;background-image:radial-gradient(circle,rgba(255,255,255,.8) 0 2px,transparent 3px);background-size:180px 120px;opacity:.65}
+@keyframes panSky{from{transform:translateX(0)}to{transform:translateX(-120px)}}
+.sarita-character{position:fixed;left:50%;bottom:24%;width:76px;height:120px;z-index:11;transform:translateX(-50%);pointer-events:none}
+.sarita-character .head{position:absolute;top:8px;left:20px;width:36px;height:36px;border-radius:50%;background:#ffd5c4;box-shadow:inset 0 -4px 0 rgba(0,0,0,.08)}
+.sarita-character .body{position:absolute;top:38px;left:14px;width:48px;height:62px;border-radius:20px;background:linear-gradient(180deg,#b98cff,#8a66e9);animation:walkBob 1.1s ease-in-out infinite}
+.sarita-character .shadow{position:absolute;bottom:0;left:12px;width:52px;height:12px;border-radius:50%;background:rgba(40,20,70,.25)}
+@keyframes walkBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.level-complete-shell{min-height:100dvh;display:grid;place-items:center;padding:clamp(10px,2vw,20px);padding-bottom:max(12px,env(safe-area-inset-bottom));}
+.level-complete-card{width:min(940px,96vw);max-height:92svh;background:linear-gradient(160deg,rgba(255,255,255,.74),rgba(241,227,255,.75));backdrop-filter:blur(14px);border-radius:28px;border:1px solid rgba(255,255,255,.8);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 45px rgba(72,49,123,.2)}
+.lc-scroll{padding:clamp(16px,2.3vw,24px);overflow:auto;display:grid;gap:12px}
+.lc-footer{padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:rgba(255,255,255,.85);position:sticky;bottom:0}
+.next-btn{width:100%;min-height:48px;border:0;border-radius:16px;background:linear-gradient(180deg,#8e7bff,#6c59e5);color:#fff;font-weight:800}
+.lc-cat{padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.65);margin-bottom:8px}
+@media (orientation: landscape) and (max-height: 520px){.level-complete-card{max-height:88svh}.lc-scroll{grid-template-columns:1fr 1fr;align-items:start;gap:16px}}
+@media (prefers-reduced-motion: reduce){.catch-btn,.sarita-character .body,.floating-clouds,.sparkle-particles{animation:none !important}}
 `;
 function MichiCollection({ rescued, onBack }) { return <Panel title='Colección de michis'><SaritaMascot /><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 10 }}>{MICHI_PROFILES.map((p) => { const unlocked = rescued.includes(p.id); return <div key={p.id} style={{ borderRadius: 14, padding: 10, background: unlocked ? 'rgba(255,255,255,.8)' : 'rgba(60,60,90,.2)' }}><div style={{ width: 36, height: 36, borderRadius: '50%', background: unlocked ? p.color : '#aaa' }} /> <b>{unlocked ? p.name : '???'}</b><div>{unlocked ? p.personality : 'Michi perdido'}</div><small>Nivel {p.level}</small><div>{unlocked ? p.phrase : 'Rescátalo para conocerlo'}</div></div>; })}</div><button onClick={onBack}>Volver</button></Panel>; }
 function Panel({ title, children }) { return <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}><div style={{ width: 'min(700px,94vw)', borderRadius: 22, padding: 22, background: 'rgba(255,255,255,.65)', backdropFilter: 'blur(10px)' }}>{title && <h2>{title}</h2>}{children}</div></div>; }
@@ -453,4 +505,4 @@ function MobileControls({ touchState, onCatch }) { const joyRef = useRef(null); 
   const lookDown = (e) => { e.preventDefault(); e.stopPropagation(); lookRef.current?.setPointerCapture?.(e.pointerId); const l=touchState.current.look; l.active=true; l.pointerId=e.pointerId; l.lastX=e.clientX; l.lastY=e.clientY; };
   const lookMove = (e) => { const l=touchState.current.look; if (!l.active || l.pointerId!==e.pointerId) return; e.preventDefault(); e.stopPropagation(); l.dx += e.clientX-l.lastX; l.dy += e.clientY-l.lastY; l.lastX=e.clientX; l.lastY=e.clientY; };
   const lookUp = (e) => { e.preventDefault(); e.stopPropagation(); const l=touchState.current.look; if (l.pointerId!==e.pointerId) return; lookRef.current?.releasePointerCapture?.(e.pointerId); l.active=false; l.pointerId=null; l.dx=0; l.dy=0; };
-  return <><div ref={joyRef} onPointerDown={joyDown} onPointerMove={joyMove} onPointerUp={joyUp} onPointerCancel={joyUp} style={{ position:'fixed', left:16, bottom:16, width:115, height:115, borderRadius:'50%', border:'2px solid #fff', background:'rgba(255,255,255,.2)', zIndex:40, touchAction:'none' }} /><div ref={lookRef} onPointerDown={lookDown} onPointerMove={lookMove} onPointerUp={lookUp} onPointerCancel={lookUp} style={{ position:'fixed', right:12, top:90, width:'52vw', height:'48vh', zIndex:10, touchAction:'none' }} /><button onPointerDown={(e)=>{e.preventDefault();e.stopPropagation();onCatch();}} onClick={(e)=>{e.preventDefault();e.stopPropagation();onCatch();}} style={{ position:'fixed', right:30, bottom:30, width:82, height:82, borderRadius:'50%', zIndex:50 }}>🌈<small style={{display:'block'}}>Rescatar</small></button></>; }
+  return <><div ref={joyRef} onPointerDown={joyDown} onPointerMove={joyMove} onPointerUp={joyUp} onPointerCancel={joyUp} style={{ position:'fixed', left:16, bottom:'max(16px,env(safe-area-inset-bottom))', width:115, height:115, borderRadius:'50%', border:'2px solid #fff', background:'rgba(255,255,255,.2)', zIndex:40, touchAction:'none' }} /><div ref={lookRef} onPointerDown={lookDown} onPointerMove={lookMove} onPointerUp={lookUp} onPointerCancel={lookUp} style={{ position:'fixed', right:12, top:90, width:'52vw', height:'48vh', zIndex:10, touchAction:'none' }} /><button className="catch-btn mobile" onPointerDown={(e)=>{e.preventDefault();e.stopPropagation();onCatch();}} onClick={(e)=>{e.preventDefault();e.stopPropagation();onCatch();}} style={{ position:'fixed', right:20, bottom:'max(16px,env(safe-area-inset-bottom))', zIndex:50 }}>🐾 Atrapar</button></>; }
