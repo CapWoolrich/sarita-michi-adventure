@@ -301,7 +301,22 @@ export default function CatHunt3D() {
       <div ref={mountRef} style={{ position: 'fixed', inset: 0 }} />
       <div className="level-world-backdrop" aria-hidden="true"><div className="rainbow-horizon"/><div className="kawaii-hills"/><div className="magical-lake"/><div className="floating-clouds"/><div className="sparkle-particles"/></div>
       <SaritaAvatar />
-      <div className="gameplay-hud"><Badge>🌎 {LEVELS[levelIndex].name}</Badge><Badge>🐱 {found}/{LEVELS[levelIndex].cats}</Badge><Badge>⏱️ {timeLeft}s</Badge><Badge>⭐ {score}</Badge><button onClick={() => setMute((m) => !m)}>{mute ? '🔇' : '🔊'}</button><button onClick={() => setPaused((p) => !p)}>{paused ? '▶️' : '⏸️'}</button><button onClick={() => { setScreen('menu'); stopGame(); }}>🏠</button></div>
+      <header className="integrated-hud">
+        <div className="hud-world">
+          <span className="hud-kicker">Mundo</span>
+          <strong>{LEVELS[levelIndex].name}</strong>
+        </div>
+        <div className="hud-stats" aria-label="estadísticas del nivel">
+          <div className="hud-stat-chip"><span>🐱</span><b>{found}/{LEVELS[levelIndex].cats}</b></div>
+          <div className="hud-stat-chip"><span>⏱️</span><b>{timeLeft}s</b></div>
+          <div className="hud-stat-chip hud-score"><span>⭐</span><b>{score}</b></div>
+        </div>
+        <div className="hud-actions" aria-label="acciones">
+          <button className="hud-icon-btn" aria-label={mute ? 'Activar audio' : 'Silenciar audio'} onClick={() => setMute((m) => !m)}>{mute ? '🔇' : '🔊'}</button>
+          <button className="hud-icon-btn" aria-label={paused ? 'Continuar juego' : 'Pausar juego'} onClick={() => setPaused((p) => !p)}>{paused ? '▶️' : '⏸️'}</button>
+          <button className="hud-icon-btn" aria-label="Volver al menú" onClick={() => { setScreen('menu'); stopGame(); }}>🏠</button>
+        </div>
+      </header>
       {isMobile && <MobileControls touchState={touchState} onCatch={() => gameRef.current?.tryCatchCat?.()} />}
       {!isMobile && <button className="catch-btn" onClick={() => { playSfx('tap'); gameRef.current?.tryCatchCat?.(); }} style={{ position: 'fixed', right: 14, bottom: 14, zIndex: 25 }}>🐾 Atrapar gatito</button>}
       <div style={{ position: 'fixed', bottom: 16, left: 0, right: 0, textAlign: 'center', color: '#fff', fontWeight: 700, textShadow: '0 2px 6px #000' }}>{hint}</div>
@@ -487,9 +502,15 @@ const cssSkin = `
 @media (max-width:820px) and (orientation:portrait){.premium-start{align-items:start}.premium-card{grid-template-columns:1fr;min-height:auto;padding:18px 14px 42px}.hero-illustration{order:-1;min-height:260px}.copy-panel h1{font-size:clamp(2rem,12vw,3.5rem)}.start-actions{grid-template-columns:1fr}.founders-badge{bottom:10px}}
 @media (max-width:560px){.start-actions{grid-template-columns:1fr}.start-action{justify-content:flex-start}.start-subtitle{border-radius:20px}.founders-badge{font-size:.76rem}}
 
-.gameplay-hud{position:fixed;top:8px;left:50%;transform:translateX(-50%);display:flex;gap:7px;flex-wrap:wrap;justify-content:center;max-width:min(94vw,980px);z-index:30;padding:8px 10px;border-radius:18px;background:rgba(255,255,255,.26);backdrop-filter:blur(9px);border:1px solid rgba(255,255,255,.5)}
-.hud-badge{background:rgba(255,255,255,.68);border-radius:999px;padding:6px 10px;font-weight:800;font-size:.92rem;color:#522a6d}
-.gameplay-hud button{border:0;border-radius:999px;padding:6px 10px;background:rgba(255,255,255,.75);font-weight:800}
+.integrated-hud{position:fixed;left:50%;top:max(6px,env(safe-area-inset-top));transform:translateX(-50%);z-index:30;width:min(95vw,920px);display:grid;grid-template-columns:minmax(120px,1fr) auto auto;align-items:center;gap:clamp(6px,1.2vw,12px);padding:clamp(5px,1vw,10px) clamp(8px,1.4vw,14px);border-radius:18px;background:linear-gradient(160deg,rgba(91,62,144,.28),rgba(255,255,255,.22));backdrop-filter:blur(10px) saturate(120%);border:1px solid rgba(255,255,255,.42);box-shadow:0 10px 24px rgba(34,16,70,.2),inset 0 1px 0 rgba(255,255,255,.48);animation:hudReveal .45s ease both}
+.hud-world{display:grid;gap:1px;min-width:0}.hud-world strong{font-size:clamp(.8rem,1.8vw,1rem);color:#fff6ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.01em}.hud-kicker{font-size:clamp(.56rem,1.2vw,.66rem);text-transform:uppercase;letter-spacing:.14em;color:rgba(255,255,255,.7);font-weight:700}
+.hud-stats{display:flex;align-items:center;gap:clamp(4px,.8vw,8px)}
+.hud-stat-chip{display:inline-flex;align-items:center;gap:5px;padding:clamp(4px,.7vw,6px) clamp(7px,1.1vw,10px);border-radius:999px;background:rgba(255,255,255,.17);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:clamp(.72rem,1.6vw,.9rem);font-weight:800;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.hud-stat-chip span{font-size:.95em;filter:drop-shadow(0 1px 2px rgba(31,18,59,.4))}.hud-score b{color:#fff0be}
+.hud-actions{display:flex;align-items:center;gap:6px;padding-left:2px;border-left:1px solid rgba(255,255,255,.3)}
+.hud-icon-btn{width:clamp(31px,5.5vw,38px);height:clamp(31px,5.5vw,38px);display:grid;place-items:center;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,.15));color:#fff;font-size:clamp(.86rem,2vw,1rem);box-shadow:inset 0 1px 0 rgba(255,255,255,.5);transition:transform .14s ease,background .2s ease,box-shadow .2s ease}
+.hud-icon-btn:hover{background:linear-gradient(180deg,rgba(255,255,255,.46),rgba(255,255,255,.2))}.hud-icon-btn:active{transform:translateY(1px) scale(.96);box-shadow:inset 0 1px 0 rgba(255,255,255,.32)}
+@keyframes hudReveal{from{opacity:0;transform:translate(-50%,-10px)}to{opacity:1;transform:translate(-50%,0)}}
 .catch-btn{min-height:52px;min-width:132px;padding:10px 16px;border:0;border-radius:20px;background:linear-gradient(180deg,#ffbef1,#ff86d1 52%,#ef54bc);color:#fff;font-weight:900;box-shadow:0 10px 22px rgba(228,76,178,.34),0 0 0 2px rgba(255,255,255,.35) inset}
 .catch-btn.mobile{min-width:116px;font-size:1rem}.catch-btn:active{transform:scale(.95)}
 .level-world-backdrop{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
@@ -519,11 +540,12 @@ const cssSkin = `
 .next-btn{width:100%;min-height:48px;border:0;border-radius:16px;background:linear-gradient(180deg,#8e7bff,#6c59e5);color:#fff;font-weight:800}
 .lc-cat{padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.65);margin-bottom:8px}
 @media (orientation: landscape) and (max-height: 520px){.level-complete-card{max-height:88svh}.lc-scroll{grid-template-columns:1fr 1fr;align-items:start;gap:16px}}
-@media (prefers-reduced-motion: reduce){.catch-btn,.sarita-character .body,.floating-clouds,.sparkle-particles{animation:none !important}}
+@media (max-width:760px){.integrated-hud{grid-template-columns:1fr auto;row-gap:6px}.hud-world{grid-column:1/2}.hud-stats{grid-column:1/3;justify-content:flex-start}.hud-actions{grid-column:2/3;grid-row:1/2;justify-self:end}.hud-stat-chip{padding:4px 8px}}
+@media (orientation:landscape) and (max-height:520px){.integrated-hud{top:max(4px,env(safe-area-inset-top));padding:4px 8px;border-radius:14px}.hud-kicker{font-size:.52rem}.hud-world strong{font-size:.76rem}.hud-stat-chip{font-size:.7rem;padding:3px 7px}.hud-icon-btn{width:30px;height:30px}}
+@media (prefers-reduced-motion: reduce){.catch-btn,.sarita-character .body,.floating-clouds,.sparkle-particles,.integrated-hud{animation:none !important}}
 `;
 function MichiCollection({ rescued, onBack }) { return <Panel title='Colección de michis'><SaritaMascot /><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 10 }}>{MICHI_PROFILES.map((p) => { const unlocked = rescued.includes(p.id); return <div key={p.id} style={{ borderRadius: 14, padding: 10, background: unlocked ? 'rgba(255,255,255,.8)' : 'rgba(60,60,90,.2)' }}><div style={{ width: 36, height: 36, borderRadius: '50%', background: unlocked ? p.color : '#aaa' }} /> <b>{unlocked ? p.name : '???'}</b><div>{unlocked ? p.personality : 'Michi perdido'}</div><small>Nivel {p.level}</small><div>{unlocked ? p.phrase : 'Rescátalo para conocerlo'}</div></div>; })}</div><button onClick={onBack}>Volver</button></Panel>; }
 function Panel({ title, children }) { return <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}><div style={{ width: 'min(700px,94vw)', borderRadius: 22, padding: 22, background: 'rgba(255,255,255,.65)', backdropFilter: 'blur(10px)' }}>{title && <h2>{title}</h2>}{children}</div></div>; }
-function Badge({ children }) { return <div className="hud-badge">{children}</div>; }
 function MobileControls({ touchState, onCatch }) { const joyRef = useRef(null); const lookRef = useRef(null);
   const joyDown = (e) => { e.preventDefault(); e.stopPropagation(); joyRef.current?.setPointerCapture?.(e.pointerId); touchState.current.joy.active = true; touchState.current.joy.pointerId = e.pointerId; };
   const joyMove = (e) => { const j = touchState.current.joy; if (!j.active || j.pointerId !== e.pointerId) return; e.preventDefault(); e.stopPropagation(); const r = joyRef.current.getBoundingClientRect(); const dx = ((e.clientX-r.left)/r.width-.5)*2; const dy = ((e.clientY-r.top)/r.height-.5)*2; const l = Math.hypot(dx,dy)||1; j.x = l>1?dx/l:dx; j.y = -(l>1?dy/l:dy); };
