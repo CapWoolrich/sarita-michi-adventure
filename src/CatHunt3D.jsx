@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import * as Tone from 'tone';
+import Game3DCanvas from './game3d/Game3DCanvas';
 
 const GAME_TITLE = 'Sarita y los michi perdidos';
 const SUBTITLE = 'Una aventura mágica para rescatar gatitos perdidos';
@@ -298,9 +299,9 @@ export default function CatHunt3D() {
     {screen === 'achievements' && <Panel title='Logros'>{['Primer rescate','Rescatista veloz','Amiga de los michis','Leyenda estrellada'].map((t,i)=><div key={t}>{achievements[i]? '✅':'⬜'} {t}</div>)}<button onClick={() => setScreen('menu')}>Volver</button></Panel>}
 
     {screen === 'playing' && <>
-      <div ref={mountRef} style={{ position: 'fixed', inset: 0 }} />
+      <div ref={mountRef} style={{ position: 'fixed', inset: 0, opacity: 0, pointerEvents: 'none' }} />
+      <Game3DCanvas touchState={touchState} />
       <div className="level-world-backdrop" aria-hidden="true"><div className="floating-clouds"/><div className="sparkle-particles"/></div>
-      <SaritaAvatar />
       <header className="integrated-hud">
         <div className="hud-world">
           <span className="hud-kicker">Mundo</span>
