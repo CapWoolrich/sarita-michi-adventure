@@ -299,7 +299,7 @@ export default function CatHunt3D() {
 
     {screen === 'playing' && <>
       <div ref={mountRef} style={{ position: 'fixed', inset: 0 }} />
-      <div className="level-world-backdrop" aria-hidden="true"><div className="rainbow-horizon"/><div className="kawaii-hills"/><div className="magical-lake"/><div className="floating-clouds"/><div className="sparkle-particles"/></div>
+      <div className="level-world-backdrop" aria-hidden="true"><div className="floating-clouds"/><div className="sparkle-particles"/></div>
       <SaritaAvatar />
       <header className="integrated-hud">
         <div className="hud-world">
@@ -513,10 +513,8 @@ const cssSkin = `
 @keyframes hudReveal{from{opacity:0;transform:translate(-50%,-10px)}to{opacity:1;transform:translate(-50%,0)}}
 .catch-btn{min-height:52px;min-width:132px;padding:10px 16px;border:0;border-radius:20px;background:linear-gradient(180deg,#ffbef1,#ff86d1 52%,#ef54bc);color:#fff;font-weight:900;box-shadow:0 10px 22px rgba(228,76,178,.34),0 0 0 2px rgba(255,255,255,.35) inset}
 .catch-btn.mobile{min-width:116px;font-size:1rem}.catch-btn:active{transform:scale(.95)}
-.level-world-backdrop{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
-.rainbow-horizon{position:absolute;left:20%;right:20%;top:12%;height:72px;opacity:.55;border-radius:100px 100px 0 0;background:radial-gradient(120% 120% at 50% 100%,transparent 50%,#ffd88e 50% 57%,#ff9fd2 57% 64%,#9fd4ff 64% 71%,#c8b3ff 71% 78%,transparent 78%)}
-.kawaii-hills{position:absolute;left:-8%;right:-8%;bottom:10%;height:130px;background:radial-gradient(40% 100% at 20% 100%,#b0e6b8 0 70%,transparent 72%),radial-gradient(40% 100% at 50% 100%,#c4efcb 0 70%,transparent 72%),radial-gradient(40% 100% at 80% 100%,#a8dfbc 0 70%,transparent 72%);opacity:.55}
-.magical-lake{display:none}.floating-clouds,.sparkle-particles{position:absolute;inset:0;background-repeat:repeat;animation:panSky 70s linear infinite}.floating-clouds{opacity:.5}
+.level-world-backdrop{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;background:radial-gradient(circle at 50% 8%,rgba(255,255,255,.14),transparent 38%)}
+.floating-clouds,.sparkle-particles{position:absolute;inset:0;background-repeat:repeat;animation:panSky 70s linear infinite}.floating-clouds{opacity:.5}
 .sparkle-particles{animation-duration:35s;background-image:radial-gradient(circle,rgba(255,255,255,.8) 0 2px,transparent 3px);background-size:180px 120px;opacity:.45}
 @keyframes panSky{from{transform:translateX(0)}to{transform:translateX(-120px)}}
 .sarita-avatar{position:fixed;left:50%;bottom:19%;width:138px;height:190px;transform:translateX(-50%);z-index:12;pointer-events:none;animation:avatarBounce .8s ease-in-out infinite}
