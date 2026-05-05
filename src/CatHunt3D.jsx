@@ -245,6 +245,7 @@ export default function CatHunt3D() {
       }
         if (c.userData.ring){const t=(now-c.userData.ringBorn)/900; c.userData.ring.scale.setScalar(1+t*2.4); c.userData.ring.material.opacity=Math.max(0,.9-t); if(t>1){scene.remove(c.userData.ring); c.userData.ring.geometry.dispose(); c.userData.ring.material.dispose(); c.userData.ring=null;}}
         if (c.userData.found && c.visible){ c.position.y += .04; c.scale.multiplyScalar(.975); if(c.scale.x<.1)c.visible=false; }
+        if (c.userData.found && !c.userData.celebrate) c.userData.celebrate = performance.now();
       });
       setHint(min < 2.2 ? '¡Aquí mismo!' : min < 5.5 ? 'Muy cerca...' : min < 10 ? 'Escucho un maullido...' : 'Explora la zona');
       if (min < 7 && Math.random() < 0.014) playSfx('meowAppear');
@@ -299,8 +300,8 @@ export default function CatHunt3D() {
     {screen === 'playing' && <>
       <div ref={mountRef} style={{ position: 'fixed', inset: 0 }} />
       <div className="level-world-backdrop" aria-hidden="true"><div className="rainbow-horizon"/><div className="kawaii-hills"/><div className="magical-lake"/><div className="floating-clouds"/><div className="sparkle-particles"/></div>
-      <div className="sarita-character" aria-hidden="true"><span className="head"/><span className="body"/><span className="shadow"/></div>
-      <div style={{ position: 'fixed', top: 8, left: 8, right: 8, display: 'flex', gap: 8, flexWrap: 'wrap', zIndex: 20 }}><Badge> Nivel: {LEVELS[levelIndex].name}</Badge><Badge>Michis: {found}/{LEVELS[levelIndex].cats}</Badge><Badge>Tiempo: {timeLeft}s</Badge><Badge>Score: {score}</Badge><button onClick={() => setMute((m) => !m)}>{mute ? '🔇' : '🔊'}</button><button onClick={() => setPaused((p) => !p)}>{paused ? '▶️' : '⏸️'}</button><button onClick={() => { setScreen('menu'); stopGame(); }}>🏠</button></div>
+      <SaritaAvatar />
+      <div className="gameplay-hud"><Badge>🌎 {LEVELS[levelIndex].name}</Badge><Badge>🐱 {found}/{LEVELS[levelIndex].cats}</Badge><Badge>⏱️ {timeLeft}s</Badge><Badge>⭐ {score}</Badge><button onClick={() => setMute((m) => !m)}>{mute ? '🔇' : '🔊'}</button><button onClick={() => setPaused((p) => !p)}>{paused ? '▶️' : '⏸️'}</button><button onClick={() => { setScreen('menu'); stopGame(); }}>🏠</button></div>
       {isMobile && <MobileControls touchState={touchState} onCatch={() => gameRef.current?.tryCatchCat?.()} />}
       {!isMobile && <button className="catch-btn" onClick={() => { playSfx('tap'); gameRef.current?.tryCatchCat?.(); }} style={{ position: 'fixed', right: 14, bottom: 14, zIndex: 25 }}>🐾 Atrapar gatito</button>}
       <div style={{ position: 'fixed', bottom: 16, left: 0, right: 0, textAlign: 'center', color: '#fff', fontWeight: 700, textShadow: '0 2px 6px #000' }}>{hint}</div>
@@ -313,6 +314,23 @@ export default function CatHunt3D() {
     {screen === 'gameover' && <Panel title='Game Over'><button onClick={() => startLevel(levelIndex)}>Reintentar</button><button onClick={() => setScreen('menu')}>Menú</button></Panel>}
     {achievementToast && <div style={{ position: 'fixed', top: 70, right: 12, zIndex: 40, background: 'rgba(255,255,255,.92)', padding: '10px 12px', borderRadius: 12 }}>{achievementToast}</div>}
     <style>{cssSkin}</style>
+  </div>;
+}
+
+
+function SaritaAvatar() {
+  return <div className="sarita-avatar" aria-hidden="true">
+    <span className="sarita-shadow"/>
+    <span className="sarita-hair-back"/>
+    <span className="sarita-leg leg-left"><i/></span>
+    <span className="sarita-leg leg-right"><i/></span>
+    <span className="sarita-body"/>
+    <span className="sarita-arm arm-left"><i/></span>
+    <span className="sarita-arm arm-right"><i/></span>
+    <span className="sarita-head"><i className="eye eye-left"/><i className="eye eye-right"/><i className="mouth"/></span>
+    <span className="sarita-bangs"/>
+    <span className="sarita-hair-side left"/><span className="sarita-hair-side right"/>
+    <span className="sarita-shoe shoe-left"/><span className="sarita-shoe shoe-right"/>
   </div>;
 }
 
@@ -469,23 +487,31 @@ const cssSkin = `
 @media (max-width:820px) and (orientation:portrait){.premium-start{align-items:start}.premium-card{grid-template-columns:1fr;min-height:auto;padding:18px 14px 42px}.hero-illustration{order:-1;min-height:260px}.copy-panel h1{font-size:clamp(2rem,12vw,3.5rem)}.start-actions{grid-template-columns:1fr}.founders-badge{bottom:10px}}
 @media (max-width:560px){.start-actions{grid-template-columns:1fr}.start-action{justify-content:flex-start}.start-subtitle{border-radius:20px}.founders-badge{font-size:.76rem}}
 
-.catch-btn{min-height:56px;min-width:140px;padding:12px 20px;border:0;border-radius:999px;background:linear-gradient(180deg,#ffb3ea,#ff78c8 52%,#e44cb2);color:#fff;font-weight:900;box-shadow:0 14px 30px rgba(228,76,178,.45),0 0 0 3px rgba(255,255,255,.35) inset;animation:catchBreath 2.6s ease-in-out infinite;transform-origin:center}
-.catch-btn.mobile{min-width:120px;font-size:1rem}
-.catch-btn:active{transform:scale(.95)}
-@keyframes catchBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+.gameplay-hud{position:fixed;top:8px;left:50%;transform:translateX(-50%);display:flex;gap:7px;flex-wrap:wrap;justify-content:center;max-width:min(94vw,980px);z-index:30;padding:8px 10px;border-radius:18px;background:rgba(255,255,255,.26);backdrop-filter:blur(9px);border:1px solid rgba(255,255,255,.5)}
+.hud-badge{background:rgba(255,255,255,.68);border-radius:999px;padding:6px 10px;font-weight:800;font-size:.92rem;color:#522a6d}
+.gameplay-hud button{border:0;border-radius:999px;padding:6px 10px;background:rgba(255,255,255,.75);font-weight:800}
+.catch-btn{min-height:52px;min-width:132px;padding:10px 16px;border:0;border-radius:20px;background:linear-gradient(180deg,#ffbef1,#ff86d1 52%,#ef54bc);color:#fff;font-weight:900;box-shadow:0 10px 22px rgba(228,76,178,.34),0 0 0 2px rgba(255,255,255,.35) inset}
+.catch-btn.mobile{min-width:116px;font-size:1rem}.catch-btn:active{transform:scale(.95)}
 .level-world-backdrop{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
-.rainbow-horizon{position:absolute;left:10%;right:10%;bottom:34%;height:120px;border-radius:120px 120px 0 0;background:radial-gradient(120% 120% at 50% 100%,transparent 46%,#ffd88e 46% 52%,#ff9fd2 52% 58%,#9fd4ff 58% 64%,#c8b3ff 64% 70%,transparent 70%)}
-.kawaii-hills{position:absolute;left:-10%;right:-10%;bottom:22%;height:170px;background:radial-gradient(40% 100% at 20% 100%,#b0e6b8 0 70%,transparent 72%),radial-gradient(40% 100% at 50% 100%,#c4efcb 0 70%,transparent 72%),radial-gradient(40% 100% at 80% 100%,#a8dfbc 0 70%,transparent 72%);opacity:.8}
-.magical-lake{position:absolute;left:14%;right:14%;bottom:14%;height:16%;border-radius:999px;background:linear-gradient(180deg,rgba(170,220,255,.8),rgba(126,182,250,.75));box-shadow:inset 0 6px 24px rgba(255,255,255,.5)}
-.floating-clouds,.sparkle-particles{position:absolute;inset:0;background-repeat:repeat;animation:panSky 70s linear infinite}
-.floating-clouds{background-image:radial-gradient(circle at 10% 20%,rgba(255,255,255,.7) 0 18px,transparent 20px),radial-gradient(circle at 60% 35%,rgba(255,255,255,.6) 0 22px,transparent 24px),radial-gradient(circle at 85% 15%,rgba(255,255,255,.56) 0 16px,transparent 18px)}
-.sparkle-particles{animation-duration:35s;background-image:radial-gradient(circle,rgba(255,255,255,.8) 0 2px,transparent 3px);background-size:180px 120px;opacity:.65}
+.rainbow-horizon{position:absolute;left:20%;right:20%;top:12%;height:72px;opacity:.55;border-radius:100px 100px 0 0;background:radial-gradient(120% 120% at 50% 100%,transparent 50%,#ffd88e 50% 57%,#ff9fd2 57% 64%,#9fd4ff 64% 71%,#c8b3ff 71% 78%,transparent 78%)}
+.kawaii-hills{position:absolute;left:-8%;right:-8%;bottom:10%;height:130px;background:radial-gradient(40% 100% at 20% 100%,#b0e6b8 0 70%,transparent 72%),radial-gradient(40% 100% at 50% 100%,#c4efcb 0 70%,transparent 72%),radial-gradient(40% 100% at 80% 100%,#a8dfbc 0 70%,transparent 72%);opacity:.55}
+.magical-lake{display:none}.floating-clouds,.sparkle-particles{position:absolute;inset:0;background-repeat:repeat;animation:panSky 70s linear infinite}.floating-clouds{opacity:.5}
+.sparkle-particles{animation-duration:35s;background-image:radial-gradient(circle,rgba(255,255,255,.8) 0 2px,transparent 3px);background-size:180px 120px;opacity:.45}
 @keyframes panSky{from{transform:translateX(0)}to{transform:translateX(-120px)}}
-.sarita-character{position:fixed;left:50%;bottom:24%;width:76px;height:120px;z-index:11;transform:translateX(-50%);pointer-events:none}
-.sarita-character .head{position:absolute;top:8px;left:20px;width:36px;height:36px;border-radius:50%;background:#ffd5c4;box-shadow:inset 0 -4px 0 rgba(0,0,0,.08)}
-.sarita-character .body{position:absolute;top:38px;left:14px;width:48px;height:62px;border-radius:20px;background:linear-gradient(180deg,#b98cff,#8a66e9);animation:walkBob 1.1s ease-in-out infinite}
-.sarita-character .shadow{position:absolute;bottom:0;left:12px;width:52px;height:12px;border-radius:50%;background:rgba(40,20,70,.25)}
-@keyframes walkBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.sarita-avatar{position:fixed;left:50%;bottom:19%;width:138px;height:190px;transform:translateX(-50%);z-index:12;pointer-events:none;animation:avatarBounce .8s ease-in-out infinite}
+.sarita-shadow{position:absolute;left:28px;bottom:8px;width:84px;height:18px;border-radius:50%;background:rgba(48,23,77,.28)}
+.sarita-head{position:absolute;left:36px;top:20px;width:66px;height:64px;border-radius:32px;background:#ffd8c8;box-shadow:inset 0 -6px 0 rgba(0,0,0,.1)}
+.sarita-bangs,.sarita-hair-back,.sarita-hair-side{position:absolute;background:linear-gradient(180deg,#6f3f47,#4f2a34)}
+.sarita-hair-back{left:29px;top:17px;width:80px;height:85px;border-radius:40px 40px 32px 32px;z-index:-1;animation:hairSway .8s ease-in-out infinite}
+.sarita-bangs{left:40px;top:22px;width:58px;height:20px;border-radius:20px 20px 10px 10px}
+.sarita-hair-side.left{left:28px;top:44px;width:16px;height:34px;border-radius:20px}.sarita-hair-side.right{left:94px;top:44px;width:16px;height:34px;border-radius:20px}
+.eye{position:absolute;top:24px;width:10px;height:14px;border-radius:10px;background:#2f2b40}.eye-left{left:16px}.eye-right{right:16px}.mouth{position:absolute;left:27px;bottom:12px;width:12px;height:6px;border-bottom:3px solid #9e5a6e;border-radius:0 0 10px 10px}
+.sarita-body{position:absolute;left:34px;top:80px;width:72px;height:72px;border-radius:20px;background:linear-gradient(180deg,#9a7dff,#6a53de)}
+.sarita-arm,.sarita-leg{position:absolute;background:#ffd8c8;border-radius:20px;transform-origin:top center}
+.sarita-arm{top:86px;width:16px;height:46px}.arm-left{left:24px;animation:armRun .45s ease-in-out infinite}.arm-right{left:96px;animation:armRun .45s ease-in-out infinite reverse}
+.sarita-leg{top:132px;width:18px;height:48px}.leg-left{left:48px;animation:legRun .45s ease-in-out infinite}.leg-right{left:76px;animation:legRun .45s ease-in-out infinite reverse}
+.sarita-shoe{position:absolute;bottom:4px;width:28px;height:12px;border-radius:12px;background:#ffffff}.shoe-left{left:42px}.shoe-right{left:72px}
+@keyframes legRun{0%,100%{transform:rotate(26deg)}50%{transform:rotate(-24deg)}}@keyframes armRun{0%,100%{transform:rotate(-22deg)}50%{transform:rotate(24deg)}}@keyframes avatarBounce{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-5px)}}@keyframes hairSway{0%,100%{transform:rotate(0deg)}50%{transform:rotate(2deg)}}
 .level-complete-shell{min-height:100dvh;display:grid;place-items:center;padding:clamp(10px,2vw,20px);padding-bottom:max(12px,env(safe-area-inset-bottom));}
 .level-complete-card{width:min(940px,96vw);max-height:92svh;background:linear-gradient(160deg,rgba(255,255,255,.74),rgba(241,227,255,.75));backdrop-filter:blur(14px);border-radius:28px;border:1px solid rgba(255,255,255,.8);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 45px rgba(72,49,123,.2)}
 .lc-scroll{padding:clamp(16px,2.3vw,24px);overflow:auto;display:grid;gap:12px}
@@ -497,7 +523,7 @@ const cssSkin = `
 `;
 function MichiCollection({ rescued, onBack }) { return <Panel title='Colección de michis'><SaritaMascot /><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 10 }}>{MICHI_PROFILES.map((p) => { const unlocked = rescued.includes(p.id); return <div key={p.id} style={{ borderRadius: 14, padding: 10, background: unlocked ? 'rgba(255,255,255,.8)' : 'rgba(60,60,90,.2)' }}><div style={{ width: 36, height: 36, borderRadius: '50%', background: unlocked ? p.color : '#aaa' }} /> <b>{unlocked ? p.name : '???'}</b><div>{unlocked ? p.personality : 'Michi perdido'}</div><small>Nivel {p.level}</small><div>{unlocked ? p.phrase : 'Rescátalo para conocerlo'}</div></div>; })}</div><button onClick={onBack}>Volver</button></Panel>; }
 function Panel({ title, children }) { return <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}><div style={{ width: 'min(700px,94vw)', borderRadius: 22, padding: 22, background: 'rgba(255,255,255,.65)', backdropFilter: 'blur(10px)' }}>{title && <h2>{title}</h2>}{children}</div></div>; }
-function Badge({ children }) { return <div style={{ background: 'rgba(255,255,255,.7)', borderRadius: 999, padding: '8px 12px', fontWeight: 700 }}>{children}</div>; }
+function Badge({ children }) { return <div className="hud-badge">{children}</div>; }
 function MobileControls({ touchState, onCatch }) { const joyRef = useRef(null); const lookRef = useRef(null);
   const joyDown = (e) => { e.preventDefault(); e.stopPropagation(); joyRef.current?.setPointerCapture?.(e.pointerId); touchState.current.joy.active = true; touchState.current.joy.pointerId = e.pointerId; };
   const joyMove = (e) => { const j = touchState.current.joy; if (!j.active || j.pointerId !== e.pointerId) return; e.preventDefault(); e.stopPropagation(); const r = joyRef.current.getBoundingClientRect(); const dx = ((e.clientX-r.left)/r.width-.5)*2; const dy = ((e.clientY-r.top)/r.height-.5)*2; const l = Math.hypot(dx,dy)||1; j.x = l>1?dx/l:dx; j.y = -(l>1?dy/l:dy); };
