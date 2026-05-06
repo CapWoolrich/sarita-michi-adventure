@@ -9,14 +9,15 @@ export default function ThirdPersonCamera({ targetRef, cameraStateRef }) {
     if (!targetRef.current) return;
     const target = targetRef.current.position;
     const { yaw, pitch, distance } = cameraStateRef.current;
-    const offset = new THREE.Vector3(
-      Math.sin(yaw) * distance,
-      3 + pitch * 2.4,
-      Math.cos(yaw) * distance
+    const horizontalDistance = distance * Math.cos(pitch);
+    const verticalOffset = 2.6 + distance * Math.sin(pitch);
+    const desired = new THREE.Vector3(
+      target.x + Math.sin(yaw) * horizontalDistance,
+      target.y + verticalOffset,
+      target.z + Math.cos(yaw) * horizontalDistance
     );
-    const desired = new THREE.Vector3().copy(target).add(offset);
-    camera.position.lerp(desired, 0.1);
-    lookAt.current.set(target.x, target.y + 1.4, target.z);
+    camera.position.lerp(desired, 0.14);
+    lookAt.current.set(target.x, target.y + 1.42, target.z);
     camera.lookAt(lookAt.current);
   });
   useEffect(() => { camera.fov = 60; camera.updateProjectionMatrix(); }, [camera]);
