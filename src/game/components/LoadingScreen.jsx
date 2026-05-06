@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const TIPS = [
   '¿Sabías que los michis dorados valen 500 puntos? ¡Atrápalos!',
@@ -10,28 +10,45 @@ const TIPS = [
   'Activa el modo rápido (⚡) para correr y dejar un rastro mágico',
   'Hay 11 mundos en total — el último es secreto 🌃',
   'Los búhos vuelan en la noche, esquívalos en el Jardín Lunar 🌙',
-  'Cada mundo tiene su música única — ¡escucha con calma!'
+  'Cada mundo tiene su música única — ¡escucha con calma!',
+  'Cada mundo tiene un peligro distinto — aprende sus patrones',
+  'En el lago Cristal cuidado con el cocodrilo 🐊',
+  'En la playa hay un cangrejo gigante que persigue 🦀',
+  'En las nubes vuela un dragón — esquívalo cuando se acerque 🐉'
 ];
 
 export default function LoadingScreen({ isOpen, worldName, onComplete, duration = 2200 }) {
   const [progress, setProgress] = useState(0);
   const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
 
+  // Mantener onComplete actualizado en un ref para no recrear el interval
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
+
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      setProgress(0);
+      return;
+    }
     setProgress(0);
     const start = Date.now();
+    let completed = false;
     const id = setInterval(() => {
       const elapsed = Date.now() - start;
       const p = Math.min(1, elapsed / duration);
       setProgress(p);
-      if (p >= 1) {
+      if (p >= 1 && !completed) {
+        completed = true;
         clearInterval(id);
-        onComplete?.();
+        // Pequeño delay para que se vea la barra al 100% antes de cerrar
+        setTimeout(() => onCompleteRef.current?.(), 80);
       }
     }, 50);
-    return () => clearInterval(id);
-  }, [isOpen, duration, onComplete]);
+    return () => {
+      clearInterval(id);
+    };
+    // SOLO depende de isOpen y duration — onComplete está en ref
+  }, [isOpen, duration]);
 
   if (!isOpen) return null;
   return (
