@@ -8,6 +8,9 @@ import WorldMapPanel from './game/components/WorldMapPanel';
 import SplashScreen from './game/components/SplashScreen';
 import LevelTransition from './game/components/LevelTransition';
 import CatCollection from './game/components/CatCollection';
+import AchievementsPanel, { AchievementToast } from './game/components/AchievementsPanel';
+import { ACHIEVEMENTS, evaluateAchievements, loadAchievements, saveAchievements, getAchievementById } from './game/achievements/achievements';
+import { haptic } from './game/haptics';
 import { startBiomeAudio, muteBiomeAudio, unmuteBiomeAudio, playCaptureChime } from './game/audio/BiomeAudio.js';
 
 const DEBUG_INPUT = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugInput') === '1';
@@ -19,6 +22,9 @@ export default function CatHunt3D() {
   const [feedback, setFeedback] = useState('');
   const [isWorldPanelOpen, setIsWorldPanelOpen] = useState(false);
   const [isCollectionOpen, setIsCollectionOpen] = useState(false);
+  const [isAchievementsOpen, setIsAchievementsOpen] = useState(false);
+  const [achievementsState, setAchievementsState] = useState(() => loadAchievements());
+  const [achievementToast, setAchievementToast] = useState(null);
   const [isTransitionOpen, setIsTransitionOpen] = useState(false);
   const game3dRef = useRef(null);
   const touchState = useRef({
@@ -44,8 +50,43 @@ export default function CatHunt3D() {
   useEffect(() => {
     if (runtime.isLevelComplete && !isTransitionOpen) {
       setIsTransitionOpen(true);
+      grantAchievements('level-complete', {
+        worldId: runtime.worldId,
+        levelId: runtime.levelId,
+        score: runtime.score,
+        targetScore: runtime.levelConfig.targetScore,
+        timeLeft: runtime.timeLeft
+      });
     }
   }, [runtime.isLevelComplete, isTransitionOpen]);
+
+  useEffect(() => {
+    // Detect new world unlock
+    const last = runtime.progress?.unlockedWorldIds?.slice(-1)?.[0];
+    if (last) grantAchievements('world-unlocked', { worldId: last });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runtime.progress?.unlockedWorldIds?.length]);
+
+
+  const grantAchievements = (event, payload) => {
+    setAchievementsState((prev) => {
+      const { newUnlocked, newState } = evaluateAchievements({
+        event,
+        state: { ...prev },
+        payload,
+        prog: runtime.progress
+      });
+      saveAchievements(newState);
+      if (newUnlocked.length > 0) {
+        // Mostrar primer logro como toast
+        const first = getAchievementById(newUnlocked[0]);
+        setAchievementToast(first);
+        haptic.achievement();
+        setTimeout(() => setAchievementToast(null), 3500);
+      }
+      return newState;
+    });
+  };
 
   const onCatch = () => {
     if (runtime.isLevelComplete) return;
@@ -53,8 +94,11 @@ export default function CatHunt3D() {
     if (result?.success) {
       runtime.captureCat(result.catId);
       playCaptureChime().catch(() => {});
+      haptic.capture();
+      grantAchievements('cat-caught', { catId: result.catId });
     } else {
       runtime.setLastCatchResult(result ?? { success: false, reason: 'no_cat' });
+      haptic.fail();
       setFeedback('Acércate un poquito más');
       setTimeout(() => setFeedback(''), 1100);
     }
@@ -82,7 +126,7 @@ export default function CatHunt3D() {
           onCollection={() => setIsCollectionOpen(true)}
           onHowToPlay={() => showFeedback('Mueve el joystick · Toca Atrapar al acercarte a un michi')}
           onCredits={() => showFeedback('Creado por Bernard y Sarita 💜')}
-          onAchievements={() => showFeedback('Próximamente: Logros')}
+          onAchievements={() => setIsAchievementsOpen(true)}
         />
         {feedback && <div className="catch-feedback">{feedback}</div>}
         <WorldMapPanel
@@ -105,6 +149,12 @@ export default function CatHunt3D() {
           progress={runtime.progress}
           onClose={() => setIsCollectionOpen(false)}
         />
+        <AchievementsPanel
+          isOpen={isAchievementsOpen}
+          achievements={achievementsState}
+          onClose={() => setIsAchievementsOpen(false)}
+        />
+        <AchievementToast achievement={achievementToast} />
       </>
     );
   }
@@ -179,6 +229,7 @@ export default function CatHunt3D() {
         onAdvance={onTransitionAdvance}
       />
 
+      <AchievementToast achievement={achievementToast} />
       {DEBUG_INPUT && (
         <pre data-game-ui="true" style={{ position: 'fixed', left: 8, bottom: 8, zIndex: 99, background: 'rgba(0,0,0,.72)', color: '#fff', padding: 8, fontSize: 11 }}>
           {JSON.stringify({
