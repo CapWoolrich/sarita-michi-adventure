@@ -92,6 +92,90 @@ function MagicSparkles({ count = 36 }) {
   );
 }
 
+
+function FlyingButterfly() {
+  const ref = useRef();
+  const wingL = useRef();
+  const wingR = useRef();
+  useFrame(({ clock }) => {
+    if (!ref.current) return;
+    const t = clock.getElapsedTime();
+    // Loop entre los gatos: trayectoria figura-8
+    ref.current.position.x = Math.sin(t * 0.5) * 1.6;
+    ref.current.position.z = 0.7 + Math.cos(t * 0.5) * 0.4;
+    ref.current.position.y = 1.3 + Math.sin(t * 1.2) * 0.5;
+    // Mira hacia donde vuela
+    const next = Math.sin((t + 0.05) * 0.5) * 1.6;
+    const dx = next - ref.current.position.x;
+    if (Math.abs(dx) > 0.001) ref.current.rotation.y = Math.atan2(dx, 0.05);
+    // Aletear
+    if (wingL.current) wingL.current.rotation.y = -0.6 + Math.sin(t * 22) * 0.55;
+    if (wingR.current) wingR.current.rotation.y = 0.6 - Math.sin(t * 22) * 0.55;
+  });
+  return (
+    <group ref={ref}>
+      <mesh>
+        <sphereGeometry args={[0.05, 8, 6]} />
+        <meshBasicMaterial color="#3a2a3a" />
+      </mesh>
+      <group ref={wingL}>
+        <mesh position={[-0.18, 0, 0]}>
+          <sphereGeometry args={[0.18, 6, 4]} />
+          <meshBasicMaterial color="#ffb6e6" transparent opacity={0.85} side={THREE.DoubleSide} toneMapped={false} />
+        </mesh>
+      </group>
+      <group ref={wingR}>
+        <mesh position={[0.18, 0, 0]}>
+          <sphereGeometry args={[0.18, 6, 4]} />
+          <meshBasicMaterial color="#ffeb9c" transparent opacity={0.85} side={THREE.DoubleSide} toneMapped={false} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+function FloatingHearts() {
+  const ref = useRef();
+  const positions = useMemo(
+    () => Array.from({ length: 12 }, (_, i) => ({
+      x: (Math.random() - 0.5) * 14,
+      z: (Math.random() - 0.5) * 6,
+      yStart: -0.5,
+      phase: Math.random() * Math.PI * 2,
+      speed: 0.4 + Math.random() * 0.4,
+      hue: i % 3
+    })),
+    []
+  );
+  useFrame(({ clock }) => {
+    if (!ref.current) return;
+    const t = clock.getElapsedTime();
+    ref.current.children.forEach((mesh, i) => {
+      const p = positions[i];
+      const offset = ((t * p.speed + p.phase) % 6);
+      mesh.position.x = p.x + Math.sin(offset) * 0.3;
+      mesh.position.z = p.z;
+      mesh.position.y = p.yStart + offset * 0.8;
+      if (mesh.material) mesh.material.opacity = 0.6 * Math.max(0, 1 - offset / 6);
+    });
+  });
+  return (
+    <group ref={ref}>
+      {positions.map((p, i) => (
+        <mesh key={i} position={[p.x, p.yStart, p.z]}>
+          <sphereGeometry args={[0.08, 8, 6]} />
+          <meshBasicMaterial
+            color={['#ff8fb8', '#ffd066', '#d4b6ff'][p.hue]}
+            transparent
+            opacity={0.7}
+            toneMapped={false}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 function CameraOrbit() {
   useFrame(({ clock, camera }) => {
     const t = clock.getElapsedTime();
@@ -143,6 +227,8 @@ function SplashScene() {
       <FloatingCat position={[0.2, 1.0, 1.4]} color="#f7f7ff" phase={1.2} />
       <FloatingCat position={[1.6, 1.0, 1] } color="#ffd6c5" phase={2.4} />
 
+      <FlyingButterfly />
+      <FloatingHearts />
       <MagicSparkles count={50} />
     </>
   );
