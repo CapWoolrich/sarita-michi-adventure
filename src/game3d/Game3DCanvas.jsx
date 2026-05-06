@@ -8,7 +8,7 @@ import CatEntity3D from './CatEntity3D';
 
 function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, captureRadius = 2, nearestCatIdRef, nearestInRangeRef, catCount = 8, captureStateRef }) {
   const characterRef = useRef();
-  const cameraStateRef = useRef({ yaw: 0, pitch: 0.2, distance: 7 });
+  const cameraStateRef = useRef({ yaw: 0, pitch: 0.18, distance: 6.2 });
   const [animState, setAnimState] = useState('idle');
   const cats = useMemo(() => Array.from({ length: catCount }, (_, i) => {
     const angle = (i / catCount) * Math.PI * 2 + Math.random() * 0.25;
@@ -19,29 +19,33 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
   useFrame((_, delta) => {
     const joy = touchState.current.joy;
     const look = touchState.current.look;
-    cameraStateRef.current.yaw -= look.dx * 0.004;
-    cameraStateRef.current.pitch = THREE.MathUtils.clamp(cameraStateRef.current.pitch - look.dy * 0.003, -0.45, 0.55);
+    cameraStateRef.current.yaw -= look.dx * 0.005;
+    cameraStateRef.current.pitch = THREE.MathUtils.clamp(cameraStateRef.current.pitch - look.dy * 0.0035, -0.35, 0.5);
     look.dx = 0; look.dy = 0;
     if (!characterRef.current) return;
-    const forward = new THREE.Vector3(Math.sin(cameraStateRef.current.yaw),0,Math.cos(cameraStateRef.current.yaw));
-    const right = new THREE.Vector3(forward.z,0,-forward.x);
-    const dir = forward.multiplyScalar(joy.y).add(right.multiplyScalar(joy.x));
-    const speed = dir.length();
+    const cameraForward = new THREE.Vector3(Math.sin(cameraStateRef.current.yaw), 0, Math.cos(cameraStateRef.current.yaw)).normalize();
+    const cameraRight = new THREE.Vector3(cameraForward.z, 0, -cameraForward.x).normalize();
+    const inputDir = new THREE.Vector3()
+      .addScaledVector(cameraForward, joy.y)
+      .addScaledVector(cameraRight, joy.x);
+    const speed = inputDir.length();
     if (speed > 0.01) {
-      dir.normalize();
-      characterRef.current.position.addScaledVector(dir, Math.min(4.6 * delta, 0.12));
+      const dir = inputDir.normalize();
+      characterRef.current.position.addScaledVector(dir, Math.min(5.1 * delta, 0.14));
       characterRef.current.position.x = THREE.MathUtils.clamp(characterRef.current.position.x, -36, 36);
       characterRef.current.position.z = THREE.MathUtils.clamp(characterRef.current.position.z, -36, 36);
       characterRef.current.rotation.y = THREE.MathUtils.lerp(characterRef.current.rotation.y, Math.atan2(dir.x, dir.z), 0.16);
       setAnimState('run');
-    } else setAnimState('idle');
+    } else {
+      setAnimState('idle');
+    }
 
     const p = characterRef.current.position;
     onPlayerPositionChange?.({ x: p.x, y: p.y, z: p.z });
     let nearest = null;
     let nearestDist = Infinity;
     for (const cat of cats) {
-      const d = Math.hypot(cat.x - p.x, cat.z - p.z);
+      const d = Math.hypot(cat.x - p.x, 0.68 - p.y, cat.z - p.z);
       if (d < nearestDist) {
         nearestDist = d;
         nearest = cat;
