@@ -31,7 +31,10 @@ function MagicParticles() {
   </mesh>)}</group>;
 }
 
-export default function WorldScene() {
+export default function WorldScene({ levelIndex = 0 }) {
+  const isNight = levelIndex >= 3;
+  const pathTone = ['#efe7be', '#d9c994', '#f2c89f', '#8092dd'][levelIndex] || '#efe7be';
+  const trailColor = ['#ffd66e', '#9fe8ff', '#ffae8a', '#c6ccff'][levelIndex] || '#ffd66e';
   return <>
     <color attach="background" args={["#d8f2ff"]} />
     <fog attach="fog" args={['#dff4ff', 30, 92]} />
@@ -45,6 +48,10 @@ export default function WorldScene() {
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.06, 0]}>
       <ringGeometry args={[8, 22, 64]} />
       <meshStandardMaterial color="#bdeeb4" transparent opacity={0.38} />
+    </mesh>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[3, 0.01, -2]}>
+      <torusGeometry args={[11, 1.2, 10, 80]} />
+      <meshStandardMaterial color={pathTone} roughness={0.96} opacity={0.7} transparent />
     </mesh>
 
     {Array.from({ length: 8 }).map((_, i) => <mesh key={`hill-${i}`} position={[Math.sin(i * 1.8) * 20, 0.2, Math.cos(i * 2.1) * 18]}>
@@ -87,6 +94,19 @@ export default function WorldScene() {
       <mesh position={[0, 0.1, 0]}><cylinderGeometry args={[0.04, 0.05, 0.2, 8]} /><meshStandardMaterial color="#f3dfc5" /></mesh>
       <mesh position={[0, 0.24, 0]}><sphereGeometry args={[0.13 + (i % 3) * 0.03, 10, 10]} /><meshStandardMaterial color={i % 2 ? '#ff8cb7' : '#b79cff'} /></mesh>
     </group>)}
+    {Array.from({ length: 28 }).map((_, i) => <group key={`paw-${i}`} position={[Math.sin(i * 0.42) * 10 + (i - 14) * 1.8, 0.01, Math.cos(i * 0.42) * 6 - 2]}>
+      <mesh position={[0, 0.02, 0]}><sphereGeometry args={[0.12, 8, 8]} /><meshStandardMaterial color="#d7c0b4" transparent opacity={0.45} /></mesh>
+      <mesh position={[0.11, 0.03, 0.11]}><sphereGeometry args={[0.05, 8, 8]} /><meshStandardMaterial color="#d7c0b4" transparent opacity={0.4} /></mesh>
+      <mesh position={[-0.11, 0.03, 0.11]}><sphereGeometry args={[0.05, 8, 8]} /><meshStandardMaterial color="#d7c0b4" transparent opacity={0.4} /></mesh>
+    </group>)}
+    {Array.from({ length: isNight ? 46 : 24 }).map((_, i) => <mesh key={`wing-${i}`} position={[Math.sin(i * 1.2) * (7 + (i % 10) * 3), 0.8 + (i % 4) * 0.25, Math.cos(i * 1.4) * (8 + (i % 9) * 2.7)]}>
+      <sphereGeometry args={[0.05, 8, 8]} />
+      <meshBasicMaterial color={isNight ? '#d9ff9d' : '#ffd0f0'} transparent opacity={isNight ? 0.42 : 0.34} />
+    </mesh>)}
+    {Array.from({ length: 14 }).map((_, i) => <mesh key={`trail-dot-${i}`} position={[Math.sin(i * 0.5) * 9 + i * 1.4 - 10, 0.05, Math.cos(i * 0.5) * 5 - 2]}>
+      <sphereGeometry args={[0.18, 8, 8]} />
+      <meshBasicMaterial color={trailColor} transparent opacity={0.45} />
+    </mesh>)}
 
     <MagicParticles />
   </>;

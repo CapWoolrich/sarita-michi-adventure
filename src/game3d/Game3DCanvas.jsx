@@ -8,7 +8,7 @@ import useRobloxLikeControls from './useRobloxLikeControls';
 
 const DEBUG_INPUT = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugInput') === '1';
 
-function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, captureRadius = 2, nearestCatIdRef, nearestInRangeRef, catCount = 8, captureStateRef, isPaused, isLevelComplete, onDebugUpdate, controlsApiRef, capturedCatIds = [], speedMode = 'normal', jumpRequestedRef }) {
+function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, captureRadius = 2, nearestCatIdRef, nearestInRangeRef, catCount = 8, captureStateRef, isPaused, isLevelComplete, onDebugUpdate, controlsApiRef, capturedCatIds = [], speedMode = 'normal', jumpRequestedRef, levelIndex = 0, onStarCollected }) {
   const characterRef = useRef();
   const [animState, setAnimState] = useState('idle');
   const cats = useMemo(() => Array.from({ length: catCount }, (_, i) => {
@@ -18,6 +18,11 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
     const z = Math.max(-30, Math.min(30, Math.sin(angle) * radius));
     return { id: i, x, z, phase: i * 1.7, color: ['#ffe7b8', '#dcc8ff', '#c5f1e6', '#ffd6ba'][i % 4] };
   }), [catCount]);
+  const stars = useMemo(() => Array.from({ length: 10 + levelIndex * 2 }, (_, i) => {
+    const angle = (i / (10 + levelIndex * 2)) * Math.PI * 2;
+    return { id: i, x: Math.cos(angle) * (7 + (i % 5) * 4), z: Math.sin(angle) * (8 + (i % 4) * 3), y: 0.5 + (i % 3) * 0.15 };
+  }), [levelIndex]);
+  const collectedStarIdsRef = useRef(new Set());
 
   controlsApiRef.current = useRobloxLikeControls({ characterRef, touchState, isPaused, isLevelComplete, onDebugUpdate, speedMode, jumpRequestedRef });
 
@@ -35,6 +40,14 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
       const d = Math.hypot(cat.x - p.x, 0.7 - p.y, cat.z - p.z);
       if (d < nearestDist) { nearestDist = d; nearest = cat; }
     }
+    for (const star of stars) {
+      if (collectedStarIdsRef.current.has(star.id)) continue;
+      const dist = Math.hypot(star.x - p.x, star.y - p.y, star.z - p.z);
+      if (dist < 1.4) {
+        collectedStarIdsRef.current.add(star.id);
+        onStarCollected?.(star.id);
+      }
+    }
     const inRange = nearestDist <= captureRadius;
     captureStateRef.current.player = { x: p.x, y: p.y, z: p.z };
     captureStateRef.current.cats = cats;
@@ -48,13 +61,17 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
   });
 
   return <>
-    <WorldScene />
-    {cats.map((cat)=><CatEntity3D key={cat.id} cat={cat} visible={!captureStateRef.current.capturedIds.has(cat.id)} highlight={nearestCatIdRef.current === cat.id && nearestInRangeRef.current} />)}
+    <WorldScene levelIndex={levelIndex} />
+    {cats.map((cat)=><CatEntity3D key={cat.id} cat={cat} visible={!captureStateRef.current.capturedIds.has(cat.id)} highlight={nearestCatIdRef.current === cat.id} />)}
+    {stars.map((star) => collectedStarIdsRef.current.has(star.id) ? null : <group key={`star-${star.id}`} position={[star.x, star.y, star.z]}>
+      <mesh><octahedronGeometry args={[0.18, 0]} /><meshStandardMaterial color="#ffe278" emissive="#ffd45c" emissiveIntensity={0.75} /></mesh>
+      <mesh rotation={[0, 0.8, 0]}><octahedronGeometry args={[0.11, 0]} /><meshBasicMaterial color="#fff0a9" transparent opacity={0.85} /></mesh>
+    </group>)}
     <CharacterSarita3D characterRef={characterRef} animState={animState} />
   </>;
 }
 
-const Game3DCanvas = forwardRef(function Game3DCanvas({ touchState, onPlayerPositionChange, onNearestCatChange, captureRadius, catCount = 8, isPaused = false, isLevelComplete = false, capturedCatIds = [], speedMode = 'normal', jumpNonce = 0 }, ref) {
+const Game3DCanvas = forwardRef(function Game3DCanvas({ touchState, onPlayerPositionChange, onNearestCatChange, captureRadius, catCount = 8, isPaused = false, isLevelComplete = false, capturedCatIds = [], speedMode = 'normal', jumpNonce = 0, levelIndex = 0, onStarCollected }, ref) {
   const nearestCatIdRef = useRef(null);
   const nearestInRangeRef = useRef(false);
   const controlsApiRef = useRef(null);
@@ -111,7 +128,7 @@ const Game3DCanvas = forwardRef(function Game3DCanvas({ touchState, onPlayerPosi
 
   return <div className="gameplay-screen" style={{ position:'fixed', inset:0, zIndex:2 }}>
     <Canvas shadows dpr={[1,1.5]}>
-      <SceneRuntime touchState={touchState} onPlayerPositionChange={onPlayerPositionChange} onNearestCatChange={handleNearestCatChange} captureRadius={captureRadius} nearestCatIdRef={nearestCatIdRef} nearestInRangeRef={nearestInRangeRef} catCount={catCount} captureStateRef={captureStateRef} isPaused={isPaused} isLevelComplete={isLevelComplete} onDebugUpdate={DEBUG_INPUT ? setDebugState : undefined} controlsApiRef={controlsApiRef} capturedCatIds={capturedCatIds} speedMode={speedMode} jumpRequestedRef={jumpRequestedRef} />
+      <SceneRuntime touchState={touchState} onPlayerPositionChange={onPlayerPositionChange} onNearestCatChange={handleNearestCatChange} captureRadius={captureRadius} nearestCatIdRef={nearestCatIdRef} nearestInRangeRef={nearestInRangeRef} catCount={catCount} captureStateRef={captureStateRef} isPaused={isPaused} isLevelComplete={isLevelComplete} onDebugUpdate={DEBUG_INPUT ? setDebugState : undefined} controlsApiRef={controlsApiRef} capturedCatIds={capturedCatIds} speedMode={speedMode} jumpRequestedRef={jumpRequestedRef} levelIndex={levelIndex} onStarCollected={onStarCollected} />
     </Canvas>
     {DEBUG_INPUT && debugState && <div data-game-ui="true" style={{ position:'fixed', right:8, top:96, zIndex:95, background:'rgba(0,0,0,.75)', color:'#fff', padding:8, borderRadius:8, fontSize:11, fontFamily:'monospace' }}>
       <div>joy.x: {(debugState.joy?.x ?? 0).toFixed(2)}</div><div>joy.y: {(debugState.joy?.y ?? 0).toFixed(2)}</div><div>joy.magnitude: {(debugState.joy?.magnitude ?? 0).toFixed(2)}</div>
