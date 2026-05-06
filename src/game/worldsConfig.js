@@ -22,6 +22,7 @@ export const WORLDS = [
   { id:'world-8', order:8, name:WORLD_NAMES[7], theme:'cotton-beach', palette:['#ffe6c6','#bceeff','#ffdaef'], skyType:'beach', terrain:'sand', thumbnail:'linear-gradient(135deg,#ffd9aa,#8de8ff)', levels:baseLevels },
   { id:'world-9', order:9, name:WORLD_NAMES[8], theme:'aurora-mountain', palette:['#87a4d5','#5b72a3','#7ed9c2'], skyType:'aurora', terrain:'mountain', thumbnail:'linear-gradient(135deg,#5d7ec2,#6ed6ba)', levels:baseLevels.map((l)=>({ ...l, timeLimit:l.timeLimit-8 })) },
   { id:'world-10', order:10, name:WORLD_NAMES[9], theme:'stellar-village', palette:['#ffddb8','#8a78d4','#2f2d67'], skyType:'starry', terrain:'village-night', thumbnail:'linear-gradient(135deg,#ffca9a,#7361d6)', levels:baseLevels.map((l)=>({ ...l, timeLimit:l.timeLimit-10 })) }
+  ,{ id:'world-11', order:11, name:'Ciudad Neón', theme:'neon-city', palette:['#ff66cc','#7c4dff','#00d4ff','#ffd066'], skyType:'neon-night', terrain:'city-neon', thumbnail:'linear-gradient(135deg,#7c4dff,#ff66cc,#00d4ff)', secret:true, levels:baseLevels.map((l)=>({ ...l, timeLimit:l.timeLimit-12, catCount:l.catCount+1 })) }
 ];
 
 export const getWorldById = (worldId) => WORLDS.find((w) => w.id === worldId) ?? null;

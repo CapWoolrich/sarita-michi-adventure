@@ -448,3 +448,127 @@ export function BeachUmbrella({ position = [0, 0, 0], color = '#ff9bc8' }) {
     </group>
   );
 }
+
+/* ===== NEON CITY PRIMITIVES ===== */
+
+export function NeonSkyscraper({ position = [0, 0, 0], height = 12, color = '#ff66cc', windowColor = '#ffe66b' }) {
+  const windows = [];
+  const floors = Math.floor(height / 0.8);
+  for (let f = 0; f < floors; f++) {
+    for (let s = 0; s < 4; s++) {
+      windows.push({ floor: f, side: s, on: Math.random() > 0.35 });
+    }
+  }
+  return (
+    <group position={position}>
+      <mesh position={[0, height / 2, 0]} castShadow>
+        <boxGeometry args={[2.4, height, 2.4]} />
+        <meshStandardMaterial color={color} roughness={0.4} metalness={0.5} emissive={color} emissiveIntensity={0.08} />
+      </mesh>
+      {/* Trim luminoso en techo */}
+      <mesh position={[0, height + 0.1, 0]}>
+        <boxGeometry args={[2.6, 0.15, 2.6]} />
+        <meshBasicMaterial color={windowColor} toneMapped={false} />
+      </mesh>
+      {/* Antena con luz */}
+      <mesh position={[0, height + 0.8, 0]}>
+        <cylinderGeometry args={[0.04, 0.06, 1.2, 6]} />
+        <meshStandardMaterial color="#1a1a2e" />
+      </mesh>
+      <mesh position={[0, height + 1.5, 0]}>
+        <sphereGeometry args={[0.12, 8, 6]} />
+        <meshBasicMaterial color="#ff3a8a" toneMapped={false} />
+      </mesh>
+      {/* Ventanas iluminadas */}
+      {windows.filter((w) => w.on).map((w, i) => {
+        const yPos = w.floor * 0.8 + 0.6;
+        const sideOffsets = [
+          [1.21, 0],
+          [0, 1.21],
+          [-1.21, 0],
+          [0, -1.21]
+        ];
+        const [ox, oz] = sideOffsets[w.side];
+        const rot = w.side * (Math.PI / 2);
+        return (
+          <mesh key={i} position={[ox, yPos, oz]} rotation={[0, rot, 0]}>
+            <planeGeometry args={[0.3, 0.4]} />
+            <meshBasicMaterial color={i % 4 === 0 ? '#ff66ff' : i % 3 === 0 ? '#66ffff' : windowColor} toneMapped={false} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+export function NeonSign({ position = [0, 2, 0], color = '#ff3a8a', text = 'KAWAII' }) {
+  return (
+    <group position={position}>
+      <mesh>
+        <boxGeometry args={[2.5, 0.7, 0.15]} />
+        <meshBasicMaterial color={color} toneMapped={false} />
+      </mesh>
+      <mesh position={[0, 0, 0.1]}>
+        <boxGeometry args={[2.3, 0.5, 0.1]} />
+        <meshBasicMaterial color="#1a1a2e" />
+      </mesh>
+      <pointLight intensity={0.8} distance={6} color={color} />
+    </group>
+  );
+}
+
+export function StreetLamp({ position = [0, 0, 0], color = '#ffd066' }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 1.5, 0]} castShadow>
+        <cylinderGeometry args={[0.05, 0.08, 3, 6]} />
+        <meshStandardMaterial color="#1f2540" roughness={0.7} />
+      </mesh>
+      <mesh position={[0.5, 2.95, 0]} castShadow>
+        <boxGeometry args={[1.0, 0.08, 0.08]} />
+        <meshStandardMaterial color="#1f2540" />
+      </mesh>
+      <mesh position={[1.0, 2.85, 0]}>
+        <sphereGeometry args={[0.18, 12, 8]} />
+        <meshBasicMaterial color={color} toneMapped={false} />
+      </mesh>
+      <pointLight position={[1.0, 2.85, 0]} intensity={0.6} distance={5} color={color} />
+    </group>
+  );
+}
+
+export function ParkedCar({ position = [0, 0, 0], color = '#ff66cc' }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.35, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.6, 0.5, 0.8]} />
+        <meshStandardMaterial color={color} roughness={0.4} metalness={0.4} />
+      </mesh>
+      <mesh position={[0, 0.75, 0]} castShadow>
+        <boxGeometry args={[1.0, 0.4, 0.7]} />
+        <meshStandardMaterial color={color} roughness={0.4} metalness={0.4} />
+      </mesh>
+      {/* Faros */}
+      <mesh position={[0.81, 0.4, 0.25]}>
+        <sphereGeometry args={[0.06, 8, 6]} />
+        <meshBasicMaterial color="#fff8b8" toneMapped={false} />
+      </mesh>
+      <mesh position={[0.81, 0.4, -0.25]}>
+        <sphereGeometry args={[0.06, 8, 6]} />
+        <meshBasicMaterial color="#fff8b8" toneMapped={false} />
+      </mesh>
+      {/* Ruedas */}
+      {[
+        [0.55, 0.12, 0.4],
+        [0.55, 0.12, -0.4],
+        [-0.55, 0.12, 0.4],
+        [-0.55, 0.12, -0.4]
+      ].map((p, i) => (
+        <mesh key={i} position={p} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.14, 0.14, 0.15, 12]} />
+          <meshStandardMaterial color="#1a1a1a" />
+        </mesh>
+      ))}
+    </group>
+  );
+}
