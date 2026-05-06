@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import * as Tone from 'tone';
 import Game3DCanvas from './game3d/Game3DCanvas';
-import CameraLookPad from './game3d/CameraLookPad';
+import MobileGameInputLayer from './game3d/MobileGameInputLayer';
 
 const GAME_TITLE = 'Sarita y los michi perdidos';
 const SUBTITLE = 'Una aventura mágica para rescatar gatitos perdidos';
@@ -135,7 +135,7 @@ export default function CatHunt3D() {
   const [lastFoundProfiles, setLastFoundProfiles] = useState([]);
   const [settings, setSettings] = useState(() => safeRead('settings', { look: 'media', quality: 'normal' }));
   const mountRef = useRef(null); const gameRef = useRef(null); const game3dRef = useRef(null); const timerRef = useRef(null); const pendingLevelRef = useRef(null);
-  const touchState = useRef({ joy: { active: false, pointerId: null, x: 0, y: 0 }, look: { active: false, pointerId: null, lastX: 0, lastY: 0, dx: 0, dy: 0 } });
+  const touchState = useRef({ joystick: { active: false, x: 0, y: 0, magnitude: 0 }, joy: { active: false, x: 0, y: 0, magnitude: 0 }, look: { active: false, dx: 0, dy: 0 } });
   const [cameraDebug, setCameraDebug] = useState({ yaw: 0, pitch: 0 });
   const audioRef = useRef({ started: false, sounds: {} });
   const isMobile = useMemo(() => /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent), []);
@@ -338,12 +338,11 @@ export default function CatHunt3D() {
     {screen === 'collection' && <MichiCollection rescued={rescuedMichis} onBack={() => setScreen('menu')} />}
     {screen === 'achievements' && <Panel title='Logros'>{['Primer rescate','Rescatista veloz','Amiga de los michis','Leyenda estrellada'].map((t,i)=><div key={t}>{achievements[i]? '✅':'⬜'} {t}</div>)}<button onClick={() => setScreen('menu')}>Volver</button></Panel>}
 
-    {screen === 'playing' && <>
+    {screen === 'playing' && <div className="gameplay-screen">
       <div ref={mountRef} style={{ position: 'fixed', inset: 0, opacity: 0, pointerEvents: 'none' }} />
       <Game3DCanvas key={`${levelIndex}-${levelStartNonce}`} ref={game3dRef} touchState={touchState} catCount={LEVELS[levelIndex].cats} captureRadius={2} onPlayerPositionChange={setPlayerPosition3D} onCameraStateChange={setCameraDebug} onNearestCatChange={(id, distance, inRange) => { setNearestCatId(id); setNearestCatDistance(distance); setIsCatInCaptureRange(inRange); }} />
-      {isMobile && <CameraLookPad touchState={touchState} />}
       <div className="level-world-backdrop" aria-hidden="true"><div className="floating-clouds"/><div className="sparkle-particles"/></div>
-      <header className="integrated-hud">
+      <header className="integrated-hud" data-game-ui="true">
         <div className="hud-world">
           <span className="hud-kicker">Mundo</span>
           <strong>{LEVELS[levelIndex].name}</strong>
@@ -354,18 +353,18 @@ export default function CatHunt3D() {
           <div className="hud-stat-chip hud-score"><span>⭐</span><b>{score}</b></div>
         </div>
         <div className="hud-actions" aria-label="acciones">
-          <button className="hud-icon-btn" aria-label={mute ? 'Activar audio' : 'Silenciar audio'} onClick={() => setMute((m) => !m)}>{mute ? '🔇' : '🔊'}</button>
-          <button className="hud-icon-btn" aria-label={paused ? 'Continuar juego' : 'Pausar juego'} onClick={() => setPaused((p) => !p)}>{paused ? '▶️' : '⏸️'}</button>
-          <button className="hud-icon-btn" aria-label="Volver al menú" onClick={() => { setScreen('menu'); stopGame(); }}>🏠</button>
+          <button data-game-ui="true" className="hud-icon-btn" aria-label={mute ? 'Activar audio' : 'Silenciar audio'} onClick={() => setMute((m) => !m)}>{mute ? '🔇' : '🔊'}</button>
+          <button data-game-ui="true" className="hud-icon-btn" aria-label={paused ? 'Continuar juego' : 'Pausar juego'} onClick={() => setPaused((p) => !p)}>{paused ? '▶️' : '⏸️'}</button>
+          <button data-game-ui="true" className="hud-icon-btn" aria-label="Volver al menú" onClick={() => { setScreen('menu'); stopGame(); }}>🏠</button>
         </div>
       </header>
-      {isMobile && <MobileControls touchState={touchState} isCatInCaptureRange={isCatInCaptureRange} onCatch={handleCatchAction} />}
+      {isMobile && <MobileGameInputLayer touchState={touchState} isCatInCaptureRange={isCatInCaptureRange} onCatch={handleCatchAction} cameraDebug={cameraDebug} />}
       {!isMobile && <button className={`catch-btn ${isCatInCaptureRange ? 'catch-btn-ready' : ''}`} onClick={handleCatchAction} style={{ position: 'fixed', right: 14, bottom: 14, zIndex: 25 }}>🐾 Atrapar gatito</button>}
       <div style={{ position: 'fixed', bottom: 16, left: 0, right: 0, textAlign: 'center', color: '#fff', fontWeight: 700, textShadow: '0 2px 6px #000' }}>{hint}</div>
       {rescueToast && <div style={{ position: 'fixed', top: '18%', left: '50%', transform: 'translateX(-50%)', zIndex: 22, background: 'rgba(255,105,173,.88)', color: '#fff', padding: '8px 12px', borderRadius: 999, pointerEvents: 'none', animation: 'fadeToast 1.4s ease forwards' }}>{rescueToast}</div>}
       {paused && <Panel title='Juego en pausa'><button onClick={() => setPaused(false)}>Continuar</button><button onClick={() => startLevel(levelIndex)}>Reiniciar nivel</button><button onClick={() => { setScreen('menu'); stopGame(); }}>Menú</button></Panel>}
       {DEBUG_CAMERA && <div style={{ position: 'fixed', right: 10, top: 'max(88px, calc(env(safe-area-inset-top) + 60px))', zIndex: 80, background: 'rgba(0,0,0,.65)', color: '#fff', padding: '8px 10px', borderRadius: 8, fontFamily: 'monospace', fontSize: 12 }}><div>look.dx: {touchState.current.look.dx.toFixed(2)}</div><div>look.dy: {touchState.current.look.dy.toFixed(2)}</div><div>activePointerId: {String(touchState.current.look.pointerId)}</div><div>cameraYaw: {cameraDebug.yaw.toFixed(3)}</div><div>cameraPitch: {cameraDebug.pitch.toFixed(3)}</div></div>}
-    </>}
+    </div>}
 
     {screen === 'levelComplete' && <div className="level-complete-shell"><div className="level-complete-card"><div className="lc-scroll"><div><h2>¡Nivel completado!</h2><p>{LEVEL_STORY[Math.min(levelIndex + 1, LEVEL_STORY.length - 1)]}</p><p className="lc-world">🌎 {LEVELS[Math.min(levelIndex + 1, LEVELS.length - 1)].name}</p></div><div><h3>Gatitos encontrados</h3>{lastFoundProfiles.map((p) => <div key={p.id} className="lc-cat">🐱 {p.name} — {p.personality}</div>)}</div></div><div className="lc-footer"><button className="next-btn" onClick={() => { playSfx('nextLevel'); startLevel(levelIndex + 1); }}>Siguiente nivel</button></div></div></div>}
     {screen === 'complete' && <Panel title='Misión completa ✨'><SaritaMascot /><p>Puntuación final: {score}</p><button onClick={() => startLevel(0, true)}>Jugar de nuevo</button></Panel>}
@@ -527,6 +526,7 @@ const cssSkin = `
 @keyframes fadeToast{0%{opacity:0;transform:translate(-50%,-8px)}12%{opacity:1;transform:translate(-50%,0)}78%{opacity:1}100%{opacity:0;transform:translate(-50%,-6px)}}
 @keyframes floatSoft{0%,100%{transform:translate3d(0,0,0) rotate(0deg)}50%{transform:translate3d(0,-12px,0) rotate(8deg)}}
 @keyframes glowPulse{0%,100%{filter:drop-shadow(0 14px 30px rgba(255,124,213,.30))}50%{filter:drop-shadow(0 20px 42px rgba(255,124,213,.48))}}
+.gameplay-screen,.mobile-game-input-layer{touch-action:none;overscroll-behavior:none;-webkit-user-select:none;user-select:none}
 .magic-backdrop{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;background:radial-gradient(circle at 18% 14%,rgba(255,255,255,.70),transparent 28%),radial-gradient(circle at 80% 20%,rgba(255,194,237,.58),transparent 30%),radial-gradient(circle at 72% 78%,rgba(168,214,255,.58),transparent 36%)}
 .magic-backdrop span{position:absolute;width:clamp(16px,2vw,28px);aspect-ratio:1;background:rgba(255,255,255,.72);clip-path:polygon(50% 0,61% 35%,98% 50%,61% 65%,50% 100%,39% 65%,2% 50%,39% 35%);animation:floatSoft 5.8s ease-in-out infinite;box-shadow:0 0 34px rgba(255,255,255,.75)}
 .magic-backdrop span:nth-child(1){left:9%;top:14%;animation-delay:-1s}.magic-backdrop span:nth-child(2){left:28%;top:78%;animation-delay:-3s}.magic-backdrop span:nth-child(3){left:68%;top:11%;animation-delay:-2s}.magic-backdrop span:nth-child(4){left:90%;top:54%;animation-delay:-4s}.magic-backdrop span:nth-child(5){left:52%;top:42%;animation-delay:-5s}
@@ -589,9 +589,3 @@ const cssSkin = `
 `;
 function MichiCollection({ rescued, onBack }) { return <Panel title='Colección de michis'><SaritaMascot /><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 10 }}>{MICHI_PROFILES.map((p) => { const unlocked = rescued.includes(p.id); return <div key={p.id} style={{ borderRadius: 14, padding: 10, background: unlocked ? 'rgba(255,255,255,.8)' : 'rgba(60,60,90,.2)' }}><div style={{ width: 36, height: 36, borderRadius: '50%', background: unlocked ? p.color : '#aaa' }} /> <b>{unlocked ? p.name : '???'}</b><div>{unlocked ? p.personality : 'Michi perdido'}</div><small>Nivel {p.level}</small><div>{unlocked ? p.phrase : 'Rescátalo para conocerlo'}</div></div>; })}</div><button onClick={onBack}>Volver</button></Panel>; }
 function Panel({ title, children }) { return <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}><div style={{ width: 'min(700px,94vw)', borderRadius: 22, padding: 22, background: 'rgba(255,255,255,.65)', backdropFilter: 'blur(10px)' }}>{title && <h2>{title}</h2>}{children}</div></div>; }
-function MobileControls({ touchState, onCatch, isCatInCaptureRange }) { const joyRef = useRef(null);
-  const DEBUG_CONTROLS = false;
-  const joyDown = (e) => { e.preventDefault(); e.stopPropagation(); joyRef.current?.setPointerCapture?.(e.pointerId); touchState.current.joy.active = true; touchState.current.joy.pointerId = e.pointerId; };
-  const joyMove = (e) => { const j = touchState.current.joy; if (!j.active || j.pointerId !== e.pointerId) return; e.preventDefault(); e.stopPropagation(); const r = joyRef.current.getBoundingClientRect(); const dx = ((e.clientX-r.left)/r.width-.5)*2; const dy = ((e.clientY-r.top)/r.height-.5)*2; const clampedX = Math.max(-1, Math.min(1, dx)); const clampedY = Math.max(-1, Math.min(1, dy)); const mag = Math.hypot(clampedX, clampedY); if (mag < 0.1) { j.x = 0; j.y = 0; return; } const norm = mag > 1 ? mag : 1; j.x = clampedX / norm; j.y = clampedY / norm; if (DEBUG_CONTROLS) console.log('[joy]', j.x, j.y); };
-  const joyUp = (e) => { e.preventDefault(); e.stopPropagation(); const j = touchState.current.joy; if (j.pointerId !== e.pointerId) return; joyRef.current?.releasePointerCapture?.(e.pointerId); j.active=false; j.pointerId=null; j.x=0; j.y=0; };
-  return <><div className="joystick-zone" ref={joyRef} onPointerDown={joyDown} onPointerMove={joyMove} onPointerUp={joyUp} onPointerCancel={joyUp} style={{ position:'fixed', left:16, bottom:'max(16px,env(safe-area-inset-bottom))', width:115, height:115, borderRadius:'50%', border:'2px solid #fff', background:'rgba(255,255,255,.2)', zIndex:50, touchAction:'none' }} /><button className={`catch-btn mobile ${isCatInCaptureRange ? 'catch-btn-ready' : ''}`} onPointerDown={(e)=>{e.preventDefault();e.stopPropagation();onCatch();}} onClick={(e)=>{e.preventDefault();e.stopPropagation();onCatch();}} style={{ position:'fixed', right:20, bottom:'max(16px,env(safe-area-inset-bottom))', zIndex:60 }}>🐾 Atrapar</button></>; }
