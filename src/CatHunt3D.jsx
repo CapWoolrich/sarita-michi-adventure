@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import * as Tone from 'tone';
 import Game3DCanvas from './game3d/Game3DCanvas';
+import useCameraLookControls from './game3d/useCameraLookControls';
 
 const GAME_TITLE = 'Sarita y los michi perdidos';
 const SUBTITLE = 'Una aventura mágica para rescatar gatitos perdidos';
@@ -283,24 +284,30 @@ export default function CatHunt3D() {
   useEffect(() => { if (screen === 'playing' && found >= LEVELS[levelIndex].cats) { if (timeLeft > 30) unlockAchievement('fast', 'Rescatista veloz'); const total = score + timeLeft * 10; setScore(total); setBestScore((b) => Math.max(b, total)); setCompletedLevels((c) => [...new Set([...c, levelIndex])]); const next = Math.min(levelIndex + 1, LEVELS.length - 1); setMaxUnlockedLevel((m) => Math.max(m, next)); pendingLevelRef.current = null; stopGame(); playSfx('levelComplete'); setScreen(levelIndex === LEVELS.length - 1 ? 'complete' : 'levelComplete'); if (levelIndex === LEVELS.length - 1) unlockAchievement('legend', 'Leyenda estrellada'); } }, [found, levelIndex, score, screen, stopGame, timeLeft, playSfx]);
 
 
-  const handle3DCapture = useCallback((catId) => {
-    if (capturedCatIds3D.includes(catId)) return false;
-    setCapturedCatIds3D((prev) => [...prev, catId]);
+  const handle3DCatCaptured = useCallback((catId) => {
+    let capturedNow = false;
+    setCapturedCatIds3D((prev) => {
+      if (prev.includes(catId)) return prev;
+      capturedNow = true;
+      return [...prev, catId];
+    });
+    if (!capturedNow) return false;
+    game3dRef.current?.triggerCatchAnimation?.(catId);
     setFound((f) => f + 1);
     setScore((sc) => sc + 120);
     setHint('¡Michi rescatado!');
     playSfx('meowCatch');
     playSfx('sparkle');
     return true;
-  }, [capturedCatIds3D, playSfx]);
+  }, [playSfx]);
 
   const handleCatchAction = useCallback(() => {
     playSfx('tap');
     const result = game3dRef.current?.attemptCatch?.();
     if (!result) { gameRef.current?.tryCatchCat?.(); return; }
-    if (result.success) { handle3DCapture(result.catId); return; }
+    if (result.success) { handle3DCatCaptured(result.catId); return; }
     if (result.reason === 'too_far' || result.reason === 'no_cat') setHint('Acércate un poquito más');
-  }, [handle3DCapture, playSfx]);
+  }, [handle3DCatCaptured, playSfx]);
   const startLevel = async (idx, reset = false) => {
     await initAudio();
     const targetIndex = reset ? 0 : idx;
@@ -579,10 +586,10 @@ const cssSkin = `
 function MichiCollection({ rescued, onBack }) { return <Panel title='Colección de michis'><SaritaMascot /><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 10 }}>{MICHI_PROFILES.map((p) => { const unlocked = rescued.includes(p.id); return <div key={p.id} style={{ borderRadius: 14, padding: 10, background: unlocked ? 'rgba(255,255,255,.8)' : 'rgba(60,60,90,.2)' }}><div style={{ width: 36, height: 36, borderRadius: '50%', background: unlocked ? p.color : '#aaa' }} /> <b>{unlocked ? p.name : '???'}</b><div>{unlocked ? p.personality : 'Michi perdido'}</div><small>Nivel {p.level}</small><div>{unlocked ? p.phrase : 'Rescátalo para conocerlo'}</div></div>; })}</div><button onClick={onBack}>Volver</button></Panel>; }
 function Panel({ title, children }) { return <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}><div style={{ width: 'min(700px,94vw)', borderRadius: 22, padding: 22, background: 'rgba(255,255,255,.65)', backdropFilter: 'blur(10px)' }}>{title && <h2>{title}</h2>}{children}</div></div>; }
 function MobileControls({ touchState, onCatch, isCatInCaptureRange }) { const joyRef = useRef(null); const lookRef = useRef(null);
+  const DEBUG_CONTROLS = false;
   const joyDown = (e) => { e.preventDefault(); e.stopPropagation(); joyRef.current?.setPointerCapture?.(e.pointerId); touchState.current.joy.active = true; touchState.current.joy.pointerId = e.pointerId; };
-  const joyMove = (e) => { const j = touchState.current.joy; if (!j.active || j.pointerId !== e.pointerId) return; e.preventDefault(); e.stopPropagation(); const r = joyRef.current.getBoundingClientRect(); const dx = ((e.clientX-r.left)/r.width-.5)*2; const dy = ((e.clientY-r.top)/r.height-.5)*2; const l = Math.hypot(dx,dy)||1; j.x = l>1?dx/l:dx; j.y = -(l>1?dy/l:dy); };
+  const joyMove = (e) => { const j = touchState.current.joy; if (!j.active || j.pointerId !== e.pointerId) return; e.preventDefault(); e.stopPropagation(); const r = joyRef.current.getBoundingClientRect(); const dx = ((e.clientX-r.left)/r.width-.5)*2; const dy = ((e.clientY-r.top)/r.height-.5)*2; const clampedX = Math.max(-1, Math.min(1, dx)); const clampedY = Math.max(-1, Math.min(1, dy)); const mag = Math.hypot(clampedX, clampedY); if (mag < 0.1) { j.x = 0; j.y = 0; return; } const norm = mag > 1 ? mag : 1; j.x = clampedX / norm; j.y = clampedY / norm; if (DEBUG_CONTROLS) console.log('[joy]', j.x, j.y); };
   const joyUp = (e) => { e.preventDefault(); e.stopPropagation(); const j = touchState.current.joy; if (j.pointerId !== e.pointerId) return; joyRef.current?.releasePointerCapture?.(e.pointerId); j.active=false; j.pointerId=null; j.x=0; j.y=0; };
-  const lookDown = (e) => { e.preventDefault(); e.stopPropagation(); lookRef.current?.setPointerCapture?.(e.pointerId); const l=touchState.current.look; l.active=true; l.pointerId=e.pointerId; l.lastX=e.clientX; l.lastY=e.clientY; };
-  const lookMove = (e) => { const l=touchState.current.look; if (!l.active || l.pointerId!==e.pointerId) return; e.preventDefault(); e.stopPropagation(); l.dx += e.clientX-l.lastX; l.dy += e.clientY-l.lastY; l.lastX=e.clientX; l.lastY=e.clientY; };
-  const lookUp = (e) => { e.preventDefault(); e.stopPropagation(); const l=touchState.current.look; if (l.pointerId!==e.pointerId) return; lookRef.current?.releasePointerCapture?.(e.pointerId); l.active=false; l.pointerId=null; l.dx=0; l.dy=0; };
-  return <><div ref={joyRef} onPointerDown={joyDown} onPointerMove={joyMove} onPointerUp={joyUp} onPointerCancel={joyUp} style={{ position:'fixed', left:16, bottom:'max(16px,env(safe-area-inset-bottom))', width:115, height:115, borderRadius:'50%', border:'2px solid #fff', background:'rgba(255,255,255,.2)', zIndex:40, touchAction:'none' }} /><div ref={lookRef} onPointerDown={lookDown} onPointerMove={lookMove} onPointerUp={lookUp} onPointerCancel={lookUp} style={{ position:'fixed', right:12, top:90, width:'52vw', height:'48vh', zIndex:10, touchAction:'none' }} /><button className={`catch-btn mobile ${isCatInCaptureRange ? 'catch-btn-ready' : ''}`} onPointerDown={(e)=>{e.preventDefault();e.stopPropagation();onCatch();}} onClick={(e)=>{e.preventDefault();e.stopPropagation();onCatch();}} style={{ position:'fixed', right:20, bottom:'max(16px,env(safe-area-inset-bottom))', zIndex:50 }}>🐾 Atrapar</button></>; }
+  const lookHandlers = useCameraLookControls({ touchState, lookZoneRef: lookRef, blockedSelectors: ['.catch-btn', '.integrated-hud', '.hud-icon-btn'] });
+  return <><div ref={joyRef} onPointerDown={joyDown} onPointerMove={joyMove} onPointerUp={joyUp} onPointerCancel={joyUp} style={{ position:'fixed', left:16, bottom:'max(16px,env(safe-area-inset-bottom))', width:115, height:115, borderRadius:'50%', border:'2px solid #fff', background:'rgba(255,255,255,.2)', zIndex:40, touchAction:'none' }} /><div ref={lookRef} onPointerDown={lookHandlers.onPointerDown} onPointerMove={lookHandlers.onPointerMove} onPointerUp={lookHandlers.onPointerUp} onPointerCancel={lookHandlers.onPointerUp} style={{ position:'fixed', right:0, top:84, width:'58vw', height:'62vh', zIndex:10, touchAction:'none' }} /><button className={`catch-btn mobile ${isCatInCaptureRange ? 'catch-btn-ready' : ''}`} onPointerDown={(e)=>{e.preventDefault();e.stopPropagation();onCatch();}} onClick={(e)=>{e.preventDefault();e.stopPropagation();onCatch();}} style={{ position:'fixed', right:20, bottom:'max(16px,env(safe-area-inset-bottom))', zIndex:50 }}>🐾 Atrapar</button></>; }
+

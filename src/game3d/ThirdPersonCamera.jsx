@@ -11,11 +11,11 @@ export default function ThirdPersonCamera({ targetRef, cameraStateRef }) {
     const { yaw, pitch, distance } = cameraStateRef.current;
     const offset = new THREE.Vector3(
       Math.sin(yaw) * distance,
-      3 + pitch * 2.4,
+      2.9 + pitch * 1.9,
       Math.cos(yaw) * distance
     );
     const desired = new THREE.Vector3().copy(target).add(offset);
-    camera.position.lerp(desired, 0.1);
+    camera.position.lerp(desired, 0.12);
     lookAt.current.set(target.x, target.y + 1.4, target.z);
     camera.lookAt(lookAt.current);
   });
