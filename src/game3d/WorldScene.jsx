@@ -22,14 +22,14 @@ const THEMES = {
 
 function SkyDome({ top, bot }) {
   const geom = useMemo(() => {
-    const g = new THREE.SphereGeometry(220, 32, 16);
+    const g = new THREE.SphereGeometry(380, 32, 16);
     const colors = [];
     const c1 = new THREE.Color(top);
     const c2 = new THREE.Color(bot);
     const pos = g.attributes.position;
     for (let i = 0; i < pos.count; i++) {
       const y = pos.getY(i);
-      const t = THREE.MathUtils.clamp((y + 120) / 240, 0, 1);
+      const t = THREE.MathUtils.clamp((y + 200) / 400, 0, 1);
       const c = c2.clone().lerp(c1, t);
       colors.push(c.r, c.g, c.b);
     }
@@ -50,7 +50,7 @@ export default function WorldScene({ worldTheme = 'mystic-forest' }) {
   return (
     <>
       <color attach="background" args={[theme.skyBot]} />
-      <fog attach="fog" args={[theme.fog, 22, 110]} />
+      <fog attach="fog" args={[theme.fog, 40, 200]} />
       <SkyDome top={theme.skyTop} bot={theme.skyBot} />
 
       <ambientLight intensity={theme.ambient} color="#ffffff" />
@@ -63,22 +63,22 @@ export default function WorldScene({ worldTheme = 'mystic-forest' }) {
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
         shadow-camera-near={0.5}
-        shadow-camera-far={80}
-        shadow-camera-left={-40}
-        shadow-camera-right={40}
-        shadow-camera-top={40}
-        shadow-camera-bottom={-40}
+        shadow-camera-far={120}
+        shadow-camera-left={-60}
+        shadow-camera-right={60}
+        shadow-camera-top={60}
+        shadow-camera-bottom={-60}
         shadow-bias={-0.0008}
         shadow-normalBias={0.04}
       />
       <directionalLight position={[-12, 10, -8]} intensity={0.3} color="#cfe4ff" />
       <directionalLight position={[0, 5, -18]} intensity={0.45} color={theme.accent} />
 
-      <TerrainGround color={theme.ground} pathColor={theme.pathColor} radius={80} />
+      <TerrainGround color={theme.ground} pathColor={theme.pathColor} radius={160} />
       <BackgroundMountains biome={worldTheme} />
 
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]}>
-        <ringGeometry args={[3.5, 17, 64]} />
+        <ringGeometry args={[3.5, 22, 64]} />
         <meshStandardMaterial color={theme.pathColor} transparent opacity={0.4} roughness={0.9} />
       </mesh>
 

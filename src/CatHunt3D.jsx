@@ -82,11 +82,14 @@ export default function CatHunt3D() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen]);
 
-  // Pause menu sigue al estado de pausa
+  // Pause menu sigue al estado de pausa (excepto durante loading screen)
   useEffect(() => {
-    if (runtime.isPaused && !isTransitionOpen) setIsPauseMenuOpen(true);
-    else setIsPauseMenuOpen(false);
-  }, [runtime.isPaused, isTransitionOpen]);
+    if (runtime.isPaused && !isTransitionOpen && !isLoadingScreen) {
+      setIsPauseMenuOpen(true);
+    } else {
+      setIsPauseMenuOpen(false);
+    }
+  }, [runtime.isPaused, isTransitionOpen, isLoadingScreen]);
 
   // Audio ambiental: arranca/cambia con el bioma actual
   useEffect(() => {
@@ -99,13 +102,22 @@ export default function CatHunt3D() {
     if (mute || !settings.audioEnabled) muteBiomeAudio(); else unmuteBiomeAudio();
   }, [mute, settings.audioEnabled]);
 
-  // Loading screen al cambiar de mundo
+  // Loading screen al cambiar de mundo o entrar al juego
   useEffect(() => {
     if (screen === 'game') {
       setIsLoadingScreen(true);
+    } else {
+      setIsLoadingScreen(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runtime.worldId]);
+  }, [screen, runtime.worldId]);
+
+  // Pausar el juego mientras dura el loading screen
+  useEffect(() => {
+    if (isLoadingScreen) {
+      runtime.setIsPaused?.(true);
+    }
+  }, [isLoadingScreen]);
 
   // Sincronizar invulnerable ref con health
   useEffect(() => {
@@ -293,7 +305,7 @@ export default function CatHunt3D() {
         speedMode={runtime.speedMode}
         levelIndex={0}
         worldTheme={runtime.worldConfig.theme}
-        mapRadius={28}
+        mapRadius={56}
         lowQuality={settings.graphicsQuality === 'low'}
         enemyCount={DIFFICULTY_ENEMY_COUNT[runtime.difficulty] ?? 1}
         onEnemyHit={() => { runtime.takeDamage?.(); haptic.fail(); }}
@@ -378,7 +390,7 @@ export default function CatHunt3D() {
       <LoadingScreen
         isOpen={isLoadingScreen}
         worldName={runtime.worldConfig.name}
-        onComplete={() => setIsLoadingScreen(false)}
+        onComplete={() => { setIsLoadingScreen(false); runtime.setIsPaused?.(false); }}
       />
 
       <DifficultySelector

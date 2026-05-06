@@ -2,16 +2,12 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 
 /**
- * Terreno PLANO en zona jugable (radio 0..30) — los gatos, Sarita y todos los
- * props se posicionan a Y=0 y caminan sobre superficie sin hundirse.
- *
- * Solo aplica relieve sutil DECORATIVO en la banda externa (radio 30..50)
- * que es donde no camina nadie. Las montañas grandes ahora son meshes
- * separados en BackgroundMountains.
+ * Terreno PLANO en zona jugable (radio 0..60). El doble de tamaño que antes.
+ * Caminos visuales serpentean; relieve sutil decorativo solo en banda 60..90.
  */
-export default function TerrainGround({ color = '#9fcf86', pathColor = '#fbe9c4', radius = 80 }) {
+export default function TerrainGround({ color = '#9fcf86', pathColor = '#fbe9c4', radius = 160 }) {
   const geom = useMemo(() => {
-    const g = new THREE.CircleGeometry(radius, 128);
+    const g = new THREE.CircleGeometry(radius, 160);
     const pos = g.attributes.position;
     const colors = new Float32Array(pos.count * 3);
     const baseCol = new THREE.Color(color);
@@ -23,22 +19,20 @@ export default function TerrainGround({ color = '#9fcf86', pathColor = '#fbe9c4'
       const y = pos.getY(i);
       const r = Math.sqrt(x * x + y * y);
 
-      // Zona jugable (r < 30): perfectamente plana
-      // Zona de transición (30..50): relieve creciente, decorativo
-      // Zona externa (50+): pendiente sutil hacia las montañas de fondo
-      const playableMask = THREE.MathUtils.smoothstep(r, 30, 45);
-      const noise = Math.sin(x * 0.12) * 0.5 + Math.cos(y * 0.15) * 0.4;
-      const h = noise * playableMask * 1.2;
+      // Zona jugable plana: radio 0..60 (antes 0..30)
+      const playableMask = THREE.MathUtils.smoothstep(r, 60, 90);
+      const noise = Math.sin(x * 0.06) * 0.5 + Math.cos(y * 0.075) * 0.4;
+      const h = noise * playableMask * 1.5;
       pos.setZ(i, h);
 
-      // Caminos solo dentro de la zona jugable (más visibles ahí)
+      // Caminos centrales serpenteantes - cubren más territorio
       const pathFactor = 1 - playableMask;
-      const pathACenter = Math.sin(y * 0.05) * 8;
+      const pathACenter = Math.sin(y * 0.025) * 14;
       const distA = Math.abs(x - pathACenter);
-      const pathBCenter = Math.cos(x * 0.04) * 6;
+      const pathBCenter = Math.cos(x * 0.02) * 12;
       const distB = Math.abs(y - pathBCenter);
       const onPath = Math.min(distA, distB);
-      const pathMask = (1 - THREE.MathUtils.smoothstep(onPath, 0.8, 2.2)) * pathFactor;
+      const pathMask = (1 - THREE.MathUtils.smoothstep(onPath, 1.5, 4.0)) * pathFactor;
 
       const heightTint = THREE.MathUtils.clamp(h / 2, 0, 1);
       let c = baseCol.clone().lerp(peakCol, heightTint * 0.35);
