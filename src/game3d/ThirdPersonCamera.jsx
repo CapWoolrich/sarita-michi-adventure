@@ -8,15 +8,15 @@ export default function ThirdPersonCamera({ targetRef, cameraStateRef }) {
   useFrame(() => {
     if (!targetRef.current) return;
     const target = targetRef.current.position;
-    const { yaw, pitch, distance } = cameraStateRef.current;
+    const { yaw, pitch, distance, height = 3.2, smoothing = 0.14 } = cameraStateRef.current;
     const horizontalDistance = distance * Math.cos(pitch);
-    const verticalOffset = 2.6 + distance * Math.sin(pitch);
+    const verticalOffset = height + distance * Math.sin(pitch);
     const desired = new THREE.Vector3(
       target.x + Math.sin(yaw) * horizontalDistance,
       target.y + verticalOffset,
       target.z + Math.cos(yaw) * horizontalDistance
     );
-    camera.position.lerp(desired, 0.14);
+    camera.position.lerp(desired, smoothing);
     lookAt.current.set(target.x, target.y + 1.42, target.z);
     camera.lookAt(lookAt.current);
   });
