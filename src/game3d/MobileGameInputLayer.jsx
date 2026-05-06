@@ -96,9 +96,9 @@ export default function MobileGameInputLayer({ touchState, onCatch, onJump, onTo
       <div style={{ position: 'absolute', left: JOYSTICK_RADIUS + joystickVisual.x - 18, top: JOYSTICK_RADIUS + joystickVisual.y - 18, width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,.9)' }} />
     </div>}
     <div data-game-ui="true" style={{ position: 'fixed', right: 20, bottom: 'max(16px,env(safe-area-inset-bottom))', zIndex: 70, display:'flex', flexDirection:'column', gap:10 }}>
-      <button data-game-ui="true" className="catch-btn mobile" onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); onToggleSpeed?.(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleSpeed?.(); }}>⚡ {speedMode === 'fast' ? 'Rápido' : 'Normal'}</button>
-      <button data-game-ui="true" className="catch-btn mobile" onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); onJump?.(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onJump?.(); }}>⬆️ Saltar</button>
-      <button data-game-ui="true" className={`catch-btn mobile ${isCatInCaptureRange ? 'catch-btn-ready' : ''}`} onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); onCatch(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCatch(); }}>🐾 Atrapar</button>
+      <button data-game-ui="true" className="catch-btn mobile" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onToggleSpeed?.(); }}>⚡ {speedMode === 'fast' ? 'Rápido' : 'Normal'}</button>
+      <button data-game-ui="true" className="catch-btn mobile" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onJump?.(); }}>⬆️ Saltar</button>
+      <button data-game-ui="true" className={`catch-btn mobile ${isCatInCaptureRange ? 'catch-btn-ready' : ''}`} onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onCatch(); }}>🐾 Atrapar</button>
     </div>
     {DEBUG_MOBILE_INPUT && <div data-game-ui="true" style={{ position: 'fixed', left: 8, top: 96, zIndex: 90, background: 'rgba(0,0,0,.75)', color: '#fff', fontSize: 11, padding: 8, borderRadius: 8, fontFamily: 'monospace' }}>
       <div>moveTouchId: {String(moveTouchIdRef.current)}</div>
