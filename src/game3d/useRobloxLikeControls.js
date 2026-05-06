@@ -17,7 +17,7 @@ const lerpAngle = (from, to, alpha) => {
   return from + delta * alpha;
 };
 
-export default function useRobloxLikeControls({ characterRef, touchState, isPaused = false, isLevelComplete = false, onDebugUpdate }) {
+export default function useRobloxLikeControls({ characterRef, touchState, isPaused = false, isLevelComplete = false, onDebugUpdate, speedMode = 'normal', jumpRequestedRef }) {
   const { camera } = useThree();
   const cameraYawRef = useRef(0);
   const cameraPitchRef = useRef(0.35);
@@ -93,9 +93,11 @@ export default function useRobloxLikeControls({ characterRef, touchState, isPaus
     right.set(Math.cos(yaw), 0, -Math.sin(yaw)).normalize();
     moveDirection.set(0, 0, 0).addScaledVector(forward, forwardInput).addScaledVector(right, strafeInput);
 
+    const speedMultiplier = speedMode === 'fast' ? 1.7 : 1;
+
     if (!isPaused && !isLevelComplete && moveDirection.lengthSq() > 0.0001) {
       moveDirection.normalize();
-      const speed = 5.1;
+      const speed = 5.1 * speedMultiplier;
       player.position.x += moveDirection.x * speed * delta;
       player.position.z += moveDirection.z * speed * delta;
       player.position.x = clamp(player.position.x, -36, 36);
@@ -103,6 +105,25 @@ export default function useRobloxLikeControls({ characterRef, touchState, isPaus
       const targetYaw = Math.atan2(moveDirection.x, moveDirection.z);
       player.rotation.y = lerpAngle(player.rotation.y, targetYaw, 0.18);
     }
+
+
+    const jumpState = player.userData.jumpState || { jumpOffset: 0, verticalVelocity: 0, grounded: true };
+    if (!isPaused && !isLevelComplete && jumpRequestedRef?.current && jumpState.grounded) {
+      jumpState.verticalVelocity = 5.2;
+      jumpState.grounded = false;
+      jumpRequestedRef.current = false;
+    }
+    if (!jumpState.grounded) {
+      jumpState.verticalVelocity -= 13 * delta;
+      jumpState.jumpOffset += jumpState.verticalVelocity * delta;
+      if (jumpState.jumpOffset <= 0) {
+        jumpState.jumpOffset = 0;
+        jumpState.verticalVelocity = 0;
+        jumpState.grounded = true;
+      }
+    }
+    player.position.y = jumpState.jumpOffset;
+    player.userData.jumpState = jumpState;
 
     const pitch = cameraPitchRef.current;
     const distance = cameraDistanceRef.current;
@@ -127,7 +148,8 @@ export default function useRobloxLikeControls({ characterRef, touchState, isPaus
       lookMoveCount: lookMoveCountRef.current,
       cameraApplyCount: cameraApplyCountRef.current,
       playerPosition: { x: player.position.x, y: player.position.y, z: player.position.z },
-      playerRotation: player.rotation.y
+      playerRotation: player.rotation.y,
+      isJumping: !jumpState.grounded
     });
   });
 
