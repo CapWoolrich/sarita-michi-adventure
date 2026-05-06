@@ -4,24 +4,34 @@ import * as THREE from 'three';
 import WorldScene from './WorldScene';
 import CharacterSarita3D from './CharacterSarita3D';
 import CatEntity3D from './CatEntity3D';
+import CaptureFX from './CaptureFX';
 import useRobloxLikeControls from './useRobloxLikeControls';
 import PostFX from './PostFX';
 
 const DEBUG_INPUT = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugInput') === '1';
-// Allow disabling postFX via ?nofx=1 for low-end devices / debug.
 const DISABLE_FX = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('nofx') === '1';
 
-function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPaused, isLevelComplete, onNearestCatChange, onDebugUpdate, speedMode, jumpRequestedRef, levelIndex, playerPositionRef, worldTheme }) {
+function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPaused, isLevelComplete, onNearestCatChange, onDebugUpdate, speedMode, jumpRequestedRef, levelIndex, playerPositionRef, worldTheme, catLivePositionsRef, capturedFXList, removeFX, mapRadius }) {
   const characterRef = useRef();
   useRobloxLikeControls({ characterRef, touchState, isPaused, isLevelComplete, onDebugUpdate, speedMode, jumpRequestedRef });
+
   useFrame(() => {
     if (!characterRef.current) return;
     const p = characterRef.current.position;
-    let nearestCat = null; let nearestDistance = Infinity;
+    let nearestCat = null;
+    let nearestDistance = Infinity;
     for (const cat of cats) {
       if (capturedCatIds.includes(cat.id)) continue;
-      const distance = Math.hypot(cat.position[0] - p.x, cat.position[1] - p.y, cat.position[2] - p.z);
-      if (distance < nearestDistance) { nearestDistance = distance; nearestCat = cat; }
+      // Usa la posición LIVE del gato (no anchor estático)
+      const live = catLivePositionsRef.current[cat.id];
+      const cx = live?.x ?? cat.position[0];
+      const cy = live?.y ?? cat.position[1];
+      const cz = live?.z ?? cat.position[2];
+      const distance = Math.hypot(cx - p.x, cy - p.y, cz - p.z);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestCat = { ...cat, livePosition: { x: cx, y: cy, z: cz } };
+      }
     }
     captureStateRef.current = { player: { x: p.x, y: p.y, z: p.z }, nearestCat, nearestDistance };
     playerPositionRef.current = { x: p.x, y: p.y, z: p.z };
@@ -29,38 +39,50 @@ function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPau
       player: { x: p.x.toFixed(2), y: p.y.toFixed(2), z: p.z.toFixed(2) },
       nearestCatId: nearestCat?.id ?? null,
       nearestDistance: Number.isFinite(nearestDistance) ? Number(nearestDistance.toFixed(2)) : null,
-      renderedCatIds: cats.filter((c) => !capturedCatIds.includes(c.id)).map((c) => c.id),
-      catPositions: cats.map((c) => ({ id: c.id, p: c.position }))
+      renderedCatIds: cats.filter((c) => !capturedCatIds.includes(c.id)).map((c) => c.id)
     });
     onNearestCatChange?.(nearestCat?.id ?? null, nearestDistance, nearestDistance <= 2.6);
   });
+
+  const handleCatPosition = (id, pos) => {
+    catLivePositionsRef.current[id] = { x: pos.x, y: pos.y, z: pos.z };
+  };
+
   return (
     <>
       <WorldScene levelIndex={levelIndex} worldTheme={worldTheme} />
       {cats.map((cat) => {
         if (capturedCatIds.includes(cat.id)) return null;
         const player = playerPositionRef.current;
-        const distance = player ? Math.hypot(cat.position[0] - player.x, cat.position[2] - player.z) : null;
+        const live = catLivePositionsRef.current[cat.id];
+        const cx = live?.x ?? cat.position[0];
+        const cz = live?.z ?? cat.position[2];
+        const distance = player ? Math.hypot(cx - player.x, cz - player.z) : null;
         const highlight = captureStateRef.current?.nearestCat?.id === cat.id && (distance ?? Infinity) <= 2.6;
         return (
           <CatEntity3D
             key={cat.id}
-            cat={{ id: cat.id, x: cat.position[0], y: cat.position[1], z: cat.position[2], color: cat.color }}
+            cat={cat}
             visible
             highlight={highlight}
             showDebugMarker={DEBUG_INPUT}
             distance={distance}
-            debugLabel={cat.id}
+            mapRadius={mapRadius}
+            onPositionUpdate={handleCatPosition}
           />
         );
       })}
+      {/* Capture FX activos */}
+      {capturedFXList.map((fx) => (
+        <CaptureFX key={fx.id} position={[fx.x, fx.y, fx.z]} color={fx.color} onComplete={() => removeFX(fx.id)} />
+      ))}
       <CharacterSarita3D characterRef={characterRef} animState="run" />
     </>
   );
 }
 
 export default forwardRef(function Game3DCanvas(
-  { touchState, cats, capturedCatIds, isPaused, isLevelComplete, speedMode, levelIndex, onNearestCatChange, worldTheme },
+  { touchState, cats, capturedCatIds, isPaused, isLevelComplete, speedMode, levelIndex, onNearestCatChange, worldTheme, mapRadius = 28 },
   ref
 ) {
   const localTouchState = useRef({
@@ -73,17 +95,25 @@ export default forwardRef(function Game3DCanvas(
   const jumpRequestedRef = useRef(false);
   const [debugState, setDebugState] = useState({});
   const playerPositionRef = useRef(null);
+  const catLivePositionsRef = useRef({});
+  const [capturedFXList, setCapturedFXList] = useState([]);
+
+  const removeFX = (id) => setCapturedFXList((prev) => prev.filter((fx) => fx.id !== id));
+  const spawnFX = (cat, pos) => {
+    setCapturedFXList((prev) => [...prev, { id: `${cat.id}-${Date.now()}`, x: pos.x, y: pos.y, z: pos.z, color: cat.color }]);
+  };
 
   useImperativeHandle(
     ref,
     () => ({
-      requestJump: () => {
-        jumpRequestedRef.current = true;
-      },
+      requestJump: () => { jumpRequestedRef.current = true; },
       attemptCatch: () => {
         const { nearestCat, nearestDistance } = captureStateRef.current;
         if (!nearestCat) return { success: false, reason: 'no_cat' };
         if (nearestDistance > 2.6) return { success: false, reason: 'too_far', nearestCatId: nearestCat.id, distance: nearestDistance };
+        // Spawn FX en posición real del gato
+        const live = catLivePositionsRef.current[nearestCat.id] ?? { x: nearestCat.livePosition?.x ?? 0, y: nearestCat.livePosition?.y ?? 1, z: nearestCat.livePosition?.z ?? 0 };
+        spawnFX(nearestCat, live);
         return { success: true, catId: nearestCat.id, distance: nearestDistance };
       }
     }),
@@ -101,10 +131,8 @@ export default forwardRef(function Game3DCanvas(
           toneMapping: THREE.ACESFilmicToneMapping,
           outputColorSpace: THREE.SRGBColorSpace
         }}
-        camera={{ fov: 55, near: 0.1, far: 220 }}
-        onCreated={({ gl }) => {
-          gl.toneMappingExposure = 1.05;
-        }}
+        camera={{ fov: 55, near: 0.1, far: 260 }}
+        onCreated={({ gl }) => { gl.toneMappingExposure = 1.05; }}
       >
         <SceneRuntime
           touchState={stateRef}
@@ -120,6 +148,10 @@ export default forwardRef(function Game3DCanvas(
           levelIndex={levelIndex}
           playerPositionRef={playerPositionRef}
           worldTheme={worldTheme}
+          catLivePositionsRef={catLivePositionsRef}
+          capturedFXList={capturedFXList}
+          removeFX={removeFX}
+          mapRadius={mapRadius}
         />
         {!DISABLE_FX && <PostFX />}
       </Canvas>

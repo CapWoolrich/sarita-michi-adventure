@@ -2,7 +2,8 @@ import {
   PineTree, SakuraTree, PalmTree, CrystalSpire, BareTree, CottonTree,
   GrassPatches, FlowerScatter, MushroomCluster, RockCluster, FloatingCloud,
   ToriiGate, Lighthouse, MoonOrb, Mountain, AuroraBand, StarField,
-  Lantern, LilyPad, CloudPlatform, BeachUmbrella
+  Lantern, LilyPad, CloudPlatform, BeachUmbrella,
+  NeonSkyscraper, NeonSign, StreetLamp, ParkedCar
 } from './primitives.jsx';
 
 /* Anillos: rmin..rmax = banda, count = elementos */
@@ -290,6 +291,53 @@ export function StellarVillageBiome() {
   );
 }
 
+
+/* ===== 11. CIUDAD NEÓN — Tokyo nocturno kawaii (mundo secreto) ===== */
+export function NeonCityBiome() {
+  return (
+    <>
+      {/* Anillo interno: rascacielos pastel */}
+      {ring(14, 12, 22, 0.3).map((p, i) => (
+        <NeonSkyscraper
+          key={`tower-${i}`}
+          position={p}
+          height={6 + (i % 5) * 2.5}
+          color={['#ff66cc', '#7c4dff', '#00d4ff', '#ff8844', '#ffd066'][i % 5]}
+          windowColor={['#ffe66b', '#66ffff', '#ff66ff'][i % 3]}
+        />
+      ))}
+      {/* Anillo externo: torres más altas */}
+      {backRing(12, 24, 36).map((p, i) => (
+        <NeonSkyscraper
+          key={`btower-${i}`}
+          position={p}
+          height={10 + (i % 4) * 3}
+          color={['#7c4dff', '#ff3a8a', '#00d4ff', '#ff8844'][i % 4]}
+          windowColor={['#ffe66b', '#66ffff'][i % 2]}
+        />
+      ))}
+      {/* Letreros neón */}
+      <NeonSign position={[6, 4, -8]} color="#ff3a8a" />
+      <NeonSign position={[-7, 5, -10]} color="#00d4ff" />
+      <NeonSign position={[10, 3.5, 4]} color="#ffd066" />
+      <NeonSign position={[-12, 6, 3]} color="#7c4dff" />
+      {/* Faroles de calle */}
+      {ring(10, 5, 14, 0.5).map((p, i) => (
+        <StreetLamp key={`lamp-${i}`} position={p} color={i % 2 === 0 ? '#ffd066' : '#ff66cc'} />
+      ))}
+      {/* Carros estacionados */}
+      {ring(8, 6, 13, 0.6).map((p, i) => (
+        <ParkedCar
+          key={`car-${i}`}
+          position={p}
+          color={['#ff66cc', '#00d4ff', '#ffd066', '#7c4dff', '#ff8844'][i % 5]}
+        />
+      ))}
+      <GrassPatches count={40} area={20} color="#2a2545" />
+    </>
+  );
+}
+
 export const BIOMES = {
   'mystic-forest': MysticForestBiome,
   'sakura-city': SakuraCityBiome,
@@ -300,5 +348,6 @@ export const BIOMES = {
   'moon-garden': MoonGardenBiome,
   'cotton-beach': CottonBeachBiome,
   'aurora-mountain': AuroraMountainBiome,
-  'stellar-village': StellarVillageBiome
+  'stellar-village': StellarVillageBiome,
+  'neon-city': NeonCityBiome
 };
