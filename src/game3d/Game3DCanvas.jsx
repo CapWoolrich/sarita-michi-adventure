@@ -93,7 +93,7 @@ const Game3DCanvas = forwardRef(function Game3DCanvas({ touchState, onPlayerPosi
     attemptCatch: () => {
       const state = captureStateRef.current;
       const cats = state.cats || [];
-      const capturedSet = state.capturedIds || new Set();
+      const capturedSet = new Set(capturedCatIds);
       if (!cats.length) {
         const result = { success: false, reason: 'no_cat' };
         setLastCatchResult(result);
@@ -124,7 +124,7 @@ const Game3DCanvas = forwardRef(function Game3DCanvas({ touchState, onPlayerPosi
       setLastCatchResult(result);
       return result;
     }
-  }), [captureRadius]);;
+  }), [captureRadius, capturedCatIds]);;
 
   return <div className="gameplay-screen" style={{ position:'fixed', inset:0, zIndex:2 }}>
     <Canvas shadows dpr={[1,1.5]}>

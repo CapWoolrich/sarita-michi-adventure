@@ -109,10 +109,12 @@ export default function useRobloxLikeControls({ characterRef, touchState, isPaus
 
     const jumpState = player.userData.jumpState || { jumpOffset: 0, verticalVelocity: 0, grounded: true, isJumping: false };
     const jumpRequested = Boolean(jumpRequestedRef?.current);
-    if (!isPaused && !isLevelComplete && jumpRequested && jumpState.grounded && !jumpState.isJumping) {
-      jumpState.verticalVelocity = 5.2;
-      jumpState.grounded = false;
-      jumpState.isJumping = true;
+    if (!isPaused && !isLevelComplete && jumpRequested) {
+      if (jumpState.grounded && !jumpState.isJumping) {
+        jumpState.verticalVelocity = 5.2;
+        jumpState.grounded = false;
+        jumpState.isJumping = true;
+      }
       if (jumpRequestedRef) jumpRequestedRef.current = false;
     }
     if (!jumpState.grounded) {
@@ -158,7 +160,9 @@ export default function useRobloxLikeControls({ characterRef, touchState, isPaus
       playerRotation: player.rotation.y,
       grounded: jumpState.grounded,
       isJumping: jumpState.isJumping,
-      verticalVelocity: jumpState.verticalVelocity
+      verticalVelocity: jumpState.verticalVelocity,
+      jumpOffset: jumpState.jumpOffset,
+      jumpRequested: Boolean(jumpRequestedRef?.current)
     });
   });
 

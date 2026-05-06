@@ -134,6 +134,9 @@ export default function CatHunt3D() {
   const [speedMode, setSpeedMode] = useState('normal');
   const [jumpNonce, setJumpNonce] = useState(0);
   const [starCount, setStarCount] = useState(0);
+  const [lastCatchResult, setLastCatchResult] = useState(null);
+  const [lastCapturedCatId, setLastCapturedCatId] = useState(null);
+  const [levelCompleteQueued, setLevelCompleteQueued] = useState(false);
   const rescueToastTimeoutRef = useRef(null);
   const [paused, setPaused] = useState(false);
   const [lastFoundProfiles, setLastFoundProfiles] = useState([]);
@@ -286,11 +289,31 @@ export default function CatHunt3D() {
   }, [screen, setupLevel]);
 
   useEffect(() => { if (timeLeft === 0 && screen === 'playing') { pendingLevelRef.current = null; setScreen('gameover'); stopGame(); } }, [timeLeft, screen, stopGame]);
-  useEffect(() => { if (screen === 'playing' && found >= LEVELS[levelIndex].cats) { if (timeLeft > 30) unlockAchievement('fast', 'Rescatista veloz'); const total = score + timeLeft * 10; setScore(total); setBestScore((b) => Math.max(b, total)); setCompletedLevels((c) => [...new Set([...c, levelIndex])]); const next = Math.min(levelIndex + 1, LEVELS.length - 1); setMaxUnlockedLevel((m) => Math.max(m, next)); pendingLevelRef.current = null; stopGame(); playSfx('levelComplete'); setScreen(levelIndex === LEVELS.length - 1 ? 'complete' : 'levelComplete'); if (levelIndex === LEVELS.length - 1) unlockAchievement('legend', 'Leyenda estrellada'); } }, [found, levelIndex, score, screen, stopGame, timeLeft, playSfx]);
+  useEffect(() => {
+    if (screen !== 'playing' || levelCompleteQueued) return;
+    const totalCats = LEVELS[levelIndex].cats;
+    if (totalCats <= 0) return;
+    if (capturedCatIds3D.length < totalCats) return;
+    setLevelCompleteQueued(true);
+    if (timeLeft > 30) unlockAchievement('fast', 'Rescatista veloz');
+    const total = score + timeLeft * 10;
+    setScore(total);
+    setBestScore((b) => Math.max(b, total));
+    setCompletedLevels((c) => [...new Set([...c, levelIndex])]);
+    const next = Math.min(levelIndex + 1, LEVELS.length - 1);
+    setMaxUnlockedLevel((m) => Math.max(m, next));
+    pendingLevelRef.current = null;
+    stopGame();
+    playSfx('levelComplete');
+    setScreen(levelIndex === LEVELS.length - 1 ? 'complete' : 'levelComplete');
+    if (levelIndex === LEVELS.length - 1) unlockAchievement('legend', 'Leyenda estrellada');
+  }, [capturedCatIds3D.length, levelCompleteQueued, levelIndex, playSfx, score, screen, stopGame, timeLeft]);
 
 
   const handle3DCatCaptured = useCallback((catId) => {
-    const profile = MICHI_PROFILES[(levelIndex * 2 + catId) % MICHI_PROFILES.length];
+    if (catId == null) return false;
+    const numericId = Number(catId);
+    const profile = MICHI_PROFILES[(levelIndex * 2 + numericId) % MICHI_PROFILES.length];
     let capturedNow = false;
     setCapturedCatIds3D((prev) => {
       if (prev.includes(catId)) return prev;
@@ -298,6 +321,7 @@ export default function CatHunt3D() {
       return [...prev, catId];
     });
     if (!capturedNow) return false;
+    setLastCapturedCatId(catId);
     game3dRef.current?.triggerCatchAnimation?.(catId);
     setFound((f) => f + 1);
     setScore((sc) => sc + 120);
@@ -315,9 +339,12 @@ export default function CatHunt3D() {
   const handleCatchAction = useCallback(() => {
     playSfx('tap');
     const result = game3dRef.current?.attemptCatch?.();
-    if (!result) { gameRef.current?.tryCatchCat?.(); return; }
-    if (result.success) { handle3DCatCaptured(result.catId); return; }
-    if (result.reason === 'too_far' || result.reason === 'no_cat') setHint('Acércate un poquito más');
+    setLastCatchResult(result ?? null);
+    if (!result?.success) {
+      setHint('Acércate un poquito más');
+      return;
+    }
+    handle3DCatCaptured(result.catId);
   }, [handle3DCatCaptured, playSfx]);
   const handleStarCollected = useCallback(() => {
     setStarCount((s) => s + 1);
@@ -342,6 +369,9 @@ export default function CatHunt3D() {
     setSpeedMode('normal');
     setJumpNonce(0);
     setStarCount(0);
+    setLastCatchResult(null);
+    setLastCapturedCatId(null);
+    setLevelCompleteQueued(false);
     if (reset) { setScore(0); setLevelIndex(0); }
     else setLevelIndex(targetIndex);
     setScreen('playing');
@@ -392,13 +422,17 @@ export default function CatHunt3D() {
     {screen === 'complete' && <Panel title='Misión completa ✨'><SaritaMascot /><p>Puntuación final: {score}</p><button onClick={() => startLevel(0, true)}>Jugar de nuevo</button></Panel>}
     {screen === 'gameover' && <Panel title='Game Over'><button onClick={() => startLevel(levelIndex)}>Reintentar</button><button onClick={() => setScreen('menu')}>Menú</button></Panel>}
     {DEBUG_INPUT && screen === 'playing' && <div data-game-ui="true" style={{ position:'fixed', left:8, top:160, zIndex:95, background:'rgba(0,0,0,.75)', color:'#fff', padding:8, borderRadius:8, fontSize:11, fontFamily:'monospace' }}>
+      <div>capturedCatIds: {JSON.stringify(capturedCatIds3D)}</div>
       <div>capturedCatIds.length: {capturedCatIds3D.length}</div>
       <div>totalCats: {LEVELS[levelIndex].cats}</div>
       <div>nearestCatId: {String(nearestCatId)}</div>
       <div>nearestCatDistance: {Number.isFinite(nearestCatDistance) ? nearestCatDistance.toFixed(2) : '∞'}</div>
       <div>visibleCats: {LEVELS[levelIndex].cats - capturedCatIds3D.length}</div>
       <div>isCatInCaptureRange: {String(isCatInCaptureRange)}</div>
-      <div>lastCatchResult: {hint === 'Acércate un poquito más' ? 'too_far' : hint === '¡Michi rescatado!' ? 'success' : 'idle'}</div>
+      <div>lastCatchResult: {lastCatchResult ? JSON.stringify(lastCatchResult) : 'null'}</div>
+      <div>lastCapturedCatId: {String(lastCapturedCatId)}</div>
+      <div>levelCompleteQueued: {String(levelCompleteQueued)}</div>
+      <div>currentLevelIndex: {levelIndex}</div>
       <div>speedMode: {speedMode}</div>
     </div>}
     {achievementToast && <div style={{ position: 'fixed', top: 70, right: 12, zIndex: 40, background: 'rgba(255,255,255,.92)', padding: '10px 12px', borderRadius: 12 }}>{achievementToast}</div>}
