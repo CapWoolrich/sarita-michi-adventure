@@ -8,6 +8,8 @@ import CaptureFX from './CaptureFX';
 import useRobloxLikeControls from './useRobloxLikeControls';
 import PostFX from './PostFX';
 import SaritaTrail from './SaritaTrail';
+import EnemyEntity from './enemies/EnemyEntity';
+import { getEnemyConfig } from './enemies/biomeEnemies';
 
 const DEBUG_INPUT = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugInput') === '1';
 const DISABLE_FX = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('nofx') === '1';
@@ -29,7 +31,7 @@ const makeSnapshot = (player, cats, capturedCatIds, livePositions) => {
   return out;
 };
 
-function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPaused, isLevelComplete, onNearestCatChange, onDebugUpdate, speedMode, jumpRequestedRef, levelIndex, playerPositionRef, worldTheme, catLivePositionsRef, capturedFXList, removeFX, mapRadius }) {
+function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPaused, isLevelComplete, onNearestCatChange, onDebugUpdate, speedMode, jumpRequestedRef, levelIndex, playerPositionRef, worldTheme, catLivePositionsRef, capturedFXList, removeFX, mapRadius, enemyConfigs, onEnemyHit, invulnUntilRef }) {
   const characterRef = useRef();
   useRobloxLikeControls({ characterRef, touchState, isPaused, isLevelComplete, onDebugUpdate, speedMode, jumpRequestedRef });
 
@@ -96,12 +98,26 @@ function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPau
       ))}
       <CharacterSarita3D characterRef={characterRef} animState="run" />
       <SaritaTrail characterRef={characterRef} active={speedMode === 'fast'} />
+      {enemyConfigs.map((cfg, i) => (
+        <EnemyEntity
+          key={`enemy-${i}`}
+          type={cfg.type}
+          color={cfg.color}
+          speed={cfg.speed}
+          spawn={cfg.spawn}
+          patrolRadius={cfg.patrolRadius}
+          detectionRadius={cfg.detectionRadius}
+          playerPositionRef={playerPositionRef}
+          onHit={onEnemyHit}
+          invulnUntilRef={invulnUntilRef}
+        />
+      ))}
     </>
   );
 }
 
 export default forwardRef(function Game3DCanvas(
-  { touchState, cats, capturedCatIds, isPaused, isLevelComplete, speedMode, levelIndex, onNearestCatChange, worldTheme, mapRadius = 28, lowQuality = false },
+  { touchState, cats, capturedCatIds, isPaused, isLevelComplete, speedMode, levelIndex, onNearestCatChange, worldTheme, mapRadius = 28, lowQuality = false, enemyCount = 1, onEnemyHit, invulnUntilRef },
   ref
 ) {
   const localTouchState = useRef({
@@ -118,6 +134,23 @@ export default forwardRef(function Game3DCanvas(
   const [capturedFXList, setCapturedFXList] = useState([]);
 
   const removeFX = (id) => setCapturedFXList((prev) => prev.filter((fx) => fx.id !== id));
+
+  const enemyConfigs = (() => {
+    const base = getEnemyConfig(worldTheme);
+    if (!base || enemyCount === 0) return [];
+    return Array.from({ length: enemyCount }, (_, i) => {
+      const a = (i / Math.max(1, enemyCount)) * Math.PI * 2 + 0.7;
+      const r = 14 + i * 4;
+      return {
+        type: base.type,
+        color: base.color,
+        speed: base.speed,
+        spawn: [Math.cos(a) * r, 0, Math.sin(a) * r],
+        patrolRadius: 6,
+        detectionRadius: 7
+      };
+    });
+  })();
   const spawnFX = (cat, pos) => {
     setCapturedFXList((prev) => [...prev, { id: `${cat.id}-${Date.now()}`, x: pos.x, y: pos.y, z: pos.z, color: cat.color }]);
   };
@@ -173,6 +206,9 @@ export default forwardRef(function Game3DCanvas(
           capturedFXList={capturedFXList}
           removeFX={removeFX}
           mapRadius={mapRadius}
+          enemyConfigs={enemyConfigs}
+          onEnemyHit={onEnemyHit}
+          invulnUntilRef={invulnUntilRef}
         />
         {!DISABLE_FX && !lowQuality && <PostFX />}
       </Canvas>

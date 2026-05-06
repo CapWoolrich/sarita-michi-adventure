@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { WORLDS, getLevelConfig, getNextLevel, getWorldById } from './worldsConfig';
 import { generateLevelCats } from './levels/generateLevelCats';
+import { makeInitialHealth, INVULN_AFTER_HIT_MS, HEAL_PER_CAT, DIFFICULTY_TIME_MULT, DIFFICULTY_CAT_MULT } from './health/healthSystem';
 import { loadProgress, markLevelComplete, saveProgress, setCurrentWorldLevel, unlockWorld } from './progression/progressionStorage';
 
 export default function useGameRuntime() {
@@ -20,15 +21,28 @@ export default function useGameRuntime() {
   const [nearestCatDistance, setNearestCatDistance] = useState(Infinity);
   const [lastCatchResult, setLastCatchResult] = useState(null);
   const [speedMode, setSpeedMode] = useState('normal');
+  const [difficulty, setDifficulty] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sarita.userSettings.v1') ?? '{}').difficulty || 'medium'; } catch { return 'medium'; }
+  });
+  const [health, setHealth] = useState(() => makeInitialHealth(difficulty));
 
   const totalCats = cats.length;
   const startLevel = useCallback((nextWorldId, nextLevelId) => {
     const nextWorld = getWorldById(nextWorldId) ?? WORLDS[0];
     const nextLevel = getLevelConfig(nextWorld.id, nextLevelId) ?? nextWorld.levels[0];
     setWorldId(nextWorld.id); setLevelId(nextLevel.id);
-    setCats(generateLevelCats(nextWorld, nextLevel));
-    setCapturedCatIds([]); setTimeLeft(nextLevel.timeLimit); setIsPaused(false); setIsLevelComplete(false);
+    // Aplicar multiplicadores de dificultad
+    const tMult = DIFFICULTY_TIME_MULT[difficulty] ?? 1;
+    const cMult = DIFFICULTY_CAT_MULT[difficulty] ?? 1;
+    const adjustedLevel = {
+      ...nextLevel,
+      timeLimit: Math.max(20, Math.floor(nextLevel.timeLimit * tMult)),
+      catCount: Math.max(3, Math.round(nextLevel.catCount * cMult))
+    };
+    setCats(generateLevelCats(nextWorld, adjustedLevel));
+    setCapturedCatIds([]); setTimeLeft(Math.max(20, Math.floor(nextLevel.timeLimit * (DIFFICULTY_TIME_MULT[difficulty] ?? 1)))); setIsPaused(false); setIsLevelComplete(false);
     setNearestCatIdValue(null); setNearestCatDistance(Infinity); setLastCatchResult(null);
+    setHealth(makeInitialHealth(difficulty));
     setProgress((prev) => {
       const p = setCurrentWorldLevel(prev, nextWorld.id, nextLevel.id);
       saveProgress(p); return p;
@@ -52,10 +66,26 @@ export default function useGameRuntime() {
       const next = [...prev, catId];
       setScore((s) => s + (cats.find((c) => c.id === catId)?.points ?? 100));
       setLastCatchResult({ success: true, catId });
+      // Heal por captura
+      setHealth((h) => ({ ...h, current: Math.min(h.max, h.current + HEAL_PER_CAT) }));
       if (next.length >= cats.length && cats.length > 0) completeLevel();
       return next;
     });
   }, [cats, completeLevel]);
+
+  const takeDamage = useCallback(() => {
+    setHealth((h) => {
+      const now = Date.now();
+      if (now < h.invulnUntil) return h;
+      const newCurrent = Math.max(0, h.current - 1);
+      const newH = { ...h, current: newCurrent, invulnUntil: now + INVULN_AFTER_HIT_MS };
+      if (newCurrent === 0) {
+        // Game over -> reiniciar nivel
+        setIsPaused(true);
+      }
+      return newH;
+    });
+  }, []);
 
   /**
    * Auto-avance: al completar un nivel, salta al SIGUIENTE MUNDO (nivel 1).
@@ -92,7 +122,7 @@ export default function useGameRuntime() {
 
   return useMemo(() => ({
     worlds: WORLDS, progress, worldId, levelId, worldConfig, levelConfig, cats, totalCats, capturedCatIds, score, timeLeft, isPaused, isLevelComplete,
-    nearestCatId, nearestCatDistance, lastCatchResult, speedMode, startLevel, captureCat, completeLevel, goToNextLevel, goToWorld, setNearestCat,
+    nearestCatId, nearestCatDistance, lastCatchResult, speedMode, health, takeDamage, difficulty, setDifficulty, startLevel, captureCat, completeLevel, goToNextLevel, goToWorld, setNearestCat,
     setLastCatchResult, toggleSpeedMode, setIsPaused
-  }), [progress, worldId, levelId, worldConfig, levelConfig, cats, totalCats, capturedCatIds, score, timeLeft, isPaused, isLevelComplete, nearestCatId, nearestCatDistance, lastCatchResult, speedMode, startLevel, captureCat, completeLevel, goToNextLevel, goToWorld, setNearestCat, toggleSpeedMode]);
+  }), [progress, worldId, levelId, worldConfig, levelConfig, cats, totalCats, capturedCatIds, score, timeLeft, isPaused, isLevelComplete, nearestCatId, nearestCatDistance, lastCatchResult, speedMode, health, takeDamage, difficulty, setDifficulty, startLevel, captureCat, completeLevel, goToNextLevel, goToWorld, setNearestCat, toggleSpeedMode]);
 }
