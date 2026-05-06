@@ -6,7 +6,7 @@ import CharacterSarita3D from './CharacterSarita3D';
 import ThirdPersonCamera from './ThirdPersonCamera';
 import CatEntity3D from './CatEntity3D';
 
-function SceneRuntime({ touchState }) {
+function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, captureRadius = 2, nearestCatIdRef, nearestInRangeRef }) {
   const characterRef = useRef();
   const cameraStateRef = useRef({ yaw: 0, pitch: 0.2, distance: 7 });
   const [animState, setAnimState] = useState('idle');
@@ -35,20 +35,43 @@ function SceneRuntime({ touchState }) {
       characterRef.current.rotation.y = THREE.MathUtils.lerp(characterRef.current.rotation.y, Math.atan2(dir.x, dir.z), 0.16);
       setAnimState('run');
     } else setAnimState('idle');
+
+    const p = characterRef.current.position;
+    onPlayerPositionChange?.({ x: p.x, y: p.y, z: p.z });
+    let nearest = null;
+    let nearestDist = Infinity;
+    for (const cat of cats) {
+      const d = Math.hypot(cat.x - p.x, cat.z - p.z);
+      if (d < nearestDist) {
+        nearestDist = d;
+        nearest = cat;
+      }
+    }
+    const inRange = nearestDist <= captureRadius;
+    nearestCatIdRef.current = nearest?.id ?? null;
+    nearestInRangeRef.current = inRange;
+    onNearestCatChange?.(nearest?.id ?? null, nearestDist, inRange);
   });
 
   return <>
     <WorldScene />
-    {cats.map((cat)=><CatEntity3D key={cat.id} cat={cat} visible />)}
+    {cats.map((cat)=><CatEntity3D key={cat.id} cat={cat} visible highlight={nearestCatIdRef.current === cat.id && nearestInRangeRef.current} />)}
     <CharacterSarita3D characterRef={characterRef} animState={animState} />
     <ThirdPersonCamera targetRef={characterRef} cameraStateRef={cameraStateRef} />
   </>;
 }
 
-export default function Game3DCanvas({ touchState }) {
+export default function Game3DCanvas({ touchState, onPlayerPositionChange, onNearestCatChange, captureRadius }) {
+  const nearestCatIdRef = useRef(null);
+  const nearestInRangeRef = useRef(false);
+  const handleNearestCatChange = (id, distance, isInRange) => {
+    nearestCatIdRef.current = id;
+    nearestInRangeRef.current = isInRange;
+    onNearestCatChange?.(id, distance, isInRange);
+  };
   return <div style={{ position:'fixed', inset:0, zIndex:2 }}>
     <Canvas shadows dpr={[1,1.5]}>
-      <SceneRuntime touchState={touchState} />
+      <SceneRuntime touchState={touchState} onPlayerPositionChange={onPlayerPositionChange} onNearestCatChange={handleNearestCatChange} captureRadius={captureRadius} nearestCatIdRef={nearestCatIdRef} nearestInRangeRef={nearestInRangeRef} />
     </Canvas>
   </div>;
 }
