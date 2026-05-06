@@ -57,12 +57,24 @@ export default function useGameRuntime() {
     });
   }, [cats, completeLevel]);
 
+  /**
+   * Auto-avance: al completar un nivel, salta al SIGUIENTE MUNDO (nivel 1).
+   * Esto efectivamente convierte cada mundo en un solo nivel "tour".
+   */
   const goToNextLevel = useCallback(() => {
-    const next = getNextLevel(worldId, levelId);
-    if (!next) return;
-    if (!progress.unlockedWorldIds.includes(next.worldId)) return;
-    startLevel(next.worldId, next.levelId);
-  }, [levelId, progress.unlockedWorldIds, startLevel, worldId]);
+    const currentWorld = getWorldById(worldId);
+    if (!currentWorld) return;
+    const nextWorld = WORLDS.find((w) => w.order === currentWorld.order + 1);
+    if (!nextWorld) return;
+    // Auto-desbloquea el siguiente mundo si llegamos por avance natural
+    setProgress((prev) => {
+      if (prev.unlockedWorldIds.includes(nextWorld.id)) return prev;
+      const updated = unlockWorld(prev, nextWorld.id);
+      saveProgress(updated);
+      return updated;
+    });
+    startLevel(nextWorld.id, nextWorld.levels[0].id);
+  }, [startLevel, worldId]);
 
   const goToWorld = useCallback((nextWorldId) => {
     if (!progress.unlockedWorldIds.includes(nextWorldId)) return;
