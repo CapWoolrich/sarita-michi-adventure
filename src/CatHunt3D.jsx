@@ -10,7 +10,12 @@ import LevelTransition from './game/components/LevelTransition';
 import CatCollection from './game/components/CatCollection';
 import AchievementsPanel, { AchievementToast } from './game/components/AchievementsPanel';
 import { ACHIEVEMENTS, evaluateAchievements, loadAchievements, saveAchievements, getAchievementById } from './game/achievements/achievements';
-import { haptic } from './game/haptics';
+import { haptic, setHapticsEnabled } from './game/haptics';
+import { loadSettings, saveSettings, checkDailyStreak, recordHighScore } from './game/persistence/userSettings';
+import PauseMenu from './game/components/PauseMenu';
+import SettingsPanel from './game/components/SettingsPanel';
+import TutorialOverlay from './game/components/TutorialOverlay';
+import MiniMap from './game/components/MiniMap';
 import { startBiomeAudio, muteBiomeAudio, unmuteBiomeAudio, playCaptureChime } from './game/audio/BiomeAudio.js';
 
 const DEBUG_INPUT = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugInput') === '1';
@@ -25,6 +30,11 @@ export default function CatHunt3D() {
   const [isAchievementsOpen, setIsAchievementsOpen] = useState(false);
   const [achievementsState, setAchievementsState] = useState(() => loadAchievements());
   const [achievementToast, setAchievementToast] = useState(null);
+  const [settings, setSettings] = useState(() => loadSettings());
+  const [isPauseMenuOpen, setIsPauseMenuOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [streakInfo, setStreakInfo] = useState(null);
   const [isTransitionOpen, setIsTransitionOpen] = useState(false);
   const game3dRef = useRef(null);
   const touchState = useRef({
@@ -35,6 +45,37 @@ export default function CatHunt3D() {
 
   const visibleCats = useMemo(() => runtime.cats.filter((c) => !runtime.capturedCatIds.includes(c.id)).length, [runtime.cats, runtime.capturedCatIds]);
 
+  // Aplicar settings al cargar
+  useEffect(() => {
+    setHapticsEnabled(settings.hapticsEnabled);
+    saveSettings(settings);
+  }, [settings]);
+
+  // Daily streak check (al montar)
+  useEffect(() => {
+    const info = checkDailyStreak(settings);
+    if (info.isNewDay) {
+      const updated = { ...settings, dailyStreak: { count: info.count, lastDate: info.today } };
+      setSettings(updated);
+      setStreakInfo(info);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-show tutorial primera vez
+  useEffect(() => {
+    if (screen === 'game' && !settings.tutorialSeen) {
+      setIsTutorialOpen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen]);
+
+  // Pause menu sigue al estado de pausa
+  useEffect(() => {
+    if (runtime.isPaused && !isTransitionOpen) setIsPauseMenuOpen(true);
+    else setIsPauseMenuOpen(false);
+  }, [runtime.isPaused, isTransitionOpen]);
+
   // Audio ambiental: arranca/cambia con el bioma actual
   useEffect(() => {
     if (screen === 'game') {
@@ -43,13 +84,15 @@ export default function CatHunt3D() {
   }, [screen, runtime.worldConfig.theme]);
 
   useEffect(() => {
-    if (mute) muteBiomeAudio(); else unmuteBiomeAudio();
-  }, [mute]);
+    if (mute || !settings.audioEnabled) muteBiomeAudio(); else unmuteBiomeAudio();
+  }, [mute, settings.audioEnabled]);
 
   // Detecta nivel completado → abre transición
   useEffect(() => {
     if (runtime.isLevelComplete && !isTransitionOpen) {
       setIsTransitionOpen(true);
+      // Track high score + golden cats
+      setSettings((prev) => recordHighScore(prev, runtime.worldId, runtime.score));
       grantAchievements('level-complete', {
         worldId: runtime.worldId,
         levelId: runtime.levelId,
@@ -95,6 +138,11 @@ export default function CatHunt3D() {
       runtime.captureCat(result.catId);
       playCaptureChime().catch(() => {});
       haptic.capture();
+      const isGoldenCat = game3dRef.current?.isGolden?.(result.catId);
+      if (isGoldenCat) {
+        setSettings((s) => ({ ...s, goldenCatsCaught: (s.goldenCatsCaught ?? 0) + 1 }));
+        showFeedback('✨ ¡Michi DORADO! +500 pts');
+      }
       grantAchievements('cat-caught', { catId: result.catId });
     } else {
       runtime.setLastCatchResult(result ?? { success: false, reason: 'no_cat' });
@@ -127,6 +175,9 @@ export default function CatHunt3D() {
           onHowToPlay={() => showFeedback('Mueve el joystick · Toca Atrapar al acercarte a un michi')}
           onCredits={() => showFeedback('Creado por Bernard y Sarita 💜')}
           onAchievements={() => setIsAchievementsOpen(true)}
+          dailyStreak={settings.dailyStreak?.count ?? 0}
+          goldenCats={settings.goldenCatsCaught ?? 0}
+          highScores={settings.highScores ?? {}}
         />
         {feedback && <div className="catch-feedback">{feedback}</div>}
         <WorldMapPanel
@@ -191,6 +242,7 @@ export default function CatHunt3D() {
         levelIndex={0}
         worldTheme={runtime.worldConfig.theme}
         mapRadius={28}
+        lowQuality={settings.graphicsQuality === 'low'}
         onNearestCatChange={(catId, distance) => runtime.setNearestCat({ catId, distance })}
         runtimeKey={`${runtime.worldId}-${runtime.levelId}-${runtime.totalCats}`}
       />
@@ -227,6 +279,44 @@ export default function CatHunt3D() {
         totalCats={runtime.totalCats}
         targetScore={runtime.levelConfig.targetScore}
         onAdvance={onTransitionAdvance}
+      />
+
+      <MiniMap getRadarSnapshot={() => game3dRef.current?.getRadarSnapshot?.()} />
+
+      <PauseMenu
+        isOpen={isPauseMenuOpen}
+        audioEnabled={settings.audioEnabled}
+        hapticsEnabled={settings.hapticsEnabled}
+        onResume={() => {
+          runtime.setIsPaused(false);
+          setIsPauseMenuOpen(false);
+        }}
+        onRestart={() => {
+          setIsPauseMenuOpen(false);
+          runtime.startLevel(runtime.worldId, runtime.levelId);
+        }}
+        onHome={() => {
+          setIsPauseMenuOpen(false);
+          setScreen('splash');
+        }}
+        onSettings={() => setIsSettingsOpen(true)}
+        onToggleAudio={() => setSettings((s) => ({ ...s, audioEnabled: !s.audioEnabled }))}
+        onToggleHaptics={() => setSettings((s) => ({ ...s, hapticsEnabled: !s.hapticsEnabled }))}
+      />
+
+      <SettingsPanel
+        isOpen={isSettingsOpen}
+        settings={settings}
+        onChange={setSettings}
+        onClose={() => setIsSettingsOpen(false)}
+      />
+
+      <TutorialOverlay
+        isOpen={isTutorialOpen}
+        onClose={() => {
+          setIsTutorialOpen(false);
+          setSettings((s) => ({ ...s, tutorialSeen: true }));
+        }}
       />
 
       <AchievementToast achievement={achievementToast} />

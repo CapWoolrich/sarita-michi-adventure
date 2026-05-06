@@ -168,13 +168,13 @@ export default function CatEntity3D({ cat, visible, highlight = false, showDebug
       {/* CUERPO redondeado pequeño (puff) */}
       <mesh position={[-0.08, -0.05, 0]} castShadow>
         <sphereGeometry args={[0.32, 18, 18]} />
-        <meshToonMaterial color={cat.color} gradientMap={gradientMap} emissive={highlight ? '#fff1b8' : '#000000'} emissiveIntensity={highlight ? 0.6 : 0} />
+        <meshToonMaterial color={cat.color} gradientMap={gradientMap} emissive={cat.golden ? '#ffaa33' : (highlight ? '#fff1b8' : '#000000')} emissiveIntensity={cat.golden ? 0.45 : (highlight ? 0.6 : 0)} />
       </mesh>
 
       {/* CABEZA enorme (proporciones kawaii) */}
       <mesh position={[0.18, 0.32, 0]} castShadow>
         <sphereGeometry args={[0.42, 18, 18]} />
-        <meshToonMaterial color={cat.color} gradientMap={gradientMap} emissive={highlight ? '#fff1b8' : '#000000'} emissiveIntensity={highlight ? 0.6 : 0} />
+        <meshToonMaterial color={cat.color} gradientMap={gradientMap} emissive={cat.golden ? '#ffaa33' : (highlight ? '#fff1b8' : '#000000')} emissiveIntensity={cat.golden ? 0.45 : (highlight ? 0.6 : 0)} />
       </mesh>
 
       {/* OREJAS triangulares */}
@@ -316,6 +316,29 @@ export default function CatEntity3D({ cat, visible, highlight = false, showDebug
           <meshBasicMaterial color="#ff8eb8" />
         </mesh>
       </group>
+
+      {/* Corona si es michi dorado */}
+      {cat.golden && (
+        <group position={[0.18, 0.78, 0]}>
+          <mesh>
+            <cylinderGeometry args={[0.18, 0.22, 0.12, 8]} />
+            <meshStandardMaterial color="#ffd066" roughness={0.3} metalness={0.7} emissive="#ffd066" emissiveIntensity={0.4} />
+          </mesh>
+          {[0, 1, 2, 3, 4].map((i) => {
+            const a = (i / 5) * Math.PI * 2;
+            return (
+              <mesh key={i} position={[Math.cos(a) * 0.18, 0.1, Math.sin(a) * 0.18]}>
+                <coneGeometry args={[0.04, 0.12, 5]} />
+                <meshStandardMaterial color="#ffd066" roughness={0.3} metalness={0.7} emissive="#ffd066" emissiveIntensity={0.5} />
+              </mesh>
+            );
+          })}
+          <mesh position={[0, 0.18, 0]}>
+            <sphereGeometry args={[0.05, 10, 8]} />
+            <meshBasicMaterial color="#ff66cc" toneMapped={false} />
+          </mesh>
+        </group>
+      )}
 
       {/* Indicador corazón flotante (más alto por la cabeza grande) */}
       <group ref={heartRef} position={[0, 1.05, 0]}>

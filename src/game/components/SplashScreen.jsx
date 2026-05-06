@@ -234,7 +234,8 @@ function SplashScene() {
   );
 }
 
-export default function SplashScreen({ onStart, onContinue, onWorlds, onCollection, onHowToPlay, onCredits, onAchievements, hasProgress = false }) {
+export default function SplashScreen({ onStart, onContinue, onWorlds, onCollection, onHowToPlay, onCredits, onAchievements, hasProgress = false, dailyStreak = 0, goldenCats = 0, highScores = {} }) {
+  const totalScore = Object.values(highScores).reduce((s, v) => s + (v ?? 0), 0);
   return (
     <div className="kw-splash" data-game-ui="true">
       <div className="kw-splash-canvas">
@@ -251,6 +252,25 @@ export default function SplashScreen({ onStart, onContinue, onWorlds, onCollecti
             <span className="kw-splash-line2">y los michi perdidos</span>
           </h1>
           <p className="kw-splash-tagline">Una aventura mágica para rescatar gatitos perdidos</p>
+          {(dailyStreak > 0 || goldenCats > 0 || totalScore > 0) && (
+            <div className="kw-splash-stats">
+              {dailyStreak > 0 && (
+                <span className="kw-splash-stat-pill kw-streak">
+                  <span aria-hidden>🔥</span> Racha: {dailyStreak} {dailyStreak === 1 ? 'día' : 'días'}
+                </span>
+              )}
+              {goldenCats > 0 && (
+                <span className="kw-splash-stat-pill kw-golden">
+                  <span aria-hidden>✨</span> {goldenCats} michi{goldenCats === 1 ? '' : 's'} dorado{goldenCats === 1 ? '' : 's'}
+                </span>
+              )}
+              {totalScore > 0 && (
+                <span className="kw-splash-stat-pill">
+                  <span aria-hidden>⭐</span> {totalScore.toLocaleString()} pts
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div className="kw-splash-actions">
           <button className="kw-splash-primary" onClick={onStart}>
