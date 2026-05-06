@@ -7,6 +7,10 @@ import ThirdPersonCamera from './ThirdPersonCamera';
 import CatEntity3D from './CatEntity3D';
 
 const DEBUG_CAMERA = false;
+const LOOK_SENSITIVITY_X = 0.0085;
+const LOOK_SENSITIVITY_Y = 0.006;
+const CAMERA_MIN_PITCH = -0.4;
+const CAMERA_MAX_PITCH = 0.7;
 
 function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, onCameraStateChange, captureRadius = 2, nearestCatIdRef, nearestInRangeRef, catCount = 8, captureStateRef }) {
   const characterRef = useRef();
@@ -27,8 +31,8 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
     const joy = touchState.current.joy;
     const look = touchState.current.look;
     if (look.dx !== 0 || look.dy !== 0) {
-      cameraStateRef.current.yaw -= look.dx * 0.0075;
-      cameraStateRef.current.pitch = THREE.MathUtils.clamp(cameraStateRef.current.pitch - look.dy * 0.0055, -0.35, 0.65);
+      cameraStateRef.current.yaw -= look.dx * LOOK_SENSITIVITY_X;
+      cameraStateRef.current.pitch = THREE.MathUtils.clamp(cameraStateRef.current.pitch - look.dy * LOOK_SENSITIVITY_Y, CAMERA_MIN_PITCH, CAMERA_MAX_PITCH);
       if (DEBUG_CAMERA) console.log('[camera] consume look', { dx: look.dx, dy: look.dy, yaw: cameraStateRef.current.yaw, pitch: cameraStateRef.current.pitch, active: look.active });
       look.dx = 0;
       look.dy = 0;
