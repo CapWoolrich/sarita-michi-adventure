@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 
+const DEBUG_CAMERA = false;
+
 export default function CameraLookPad({ touchState, debug = false }) {
   const activePointerIdRef = useRef(null);
   const lastRef = useRef({ x: 0, y: 0 });
@@ -48,8 +50,11 @@ export default function CameraLookPad({ touchState, debug = false }) {
       event.target.closest('.integrated-hud') ||
       event.target.closest('.hud-icon-btn') ||
       event.target.closest('.joystick-zone') ||
-      event.target.closest('.mobile-control-btn')
+      event.target.closest('.mobile-control-btn') ||
+      event.target.closest('button')
     ) return;
+
+    if (activePointerIdRef.current != null) return;
 
     event.preventDefault();
     event.stopPropagation();
@@ -64,6 +69,8 @@ export default function CameraLookPad({ touchState, debug = false }) {
     look.lastY = event.clientY;
     look.dx = 0;
     look.dy = 0;
+
+    if (DEBUG_CAMERA) console.log('[camera-pad] pointerdown', { pointerId: event.pointerId, x: event.clientX, y: event.clientY });
 
     window.addEventListener('pointermove', onWindowPointerMove, { passive: false });
     window.addEventListener('pointerup', onWindowPointerUp, { passive: false });
