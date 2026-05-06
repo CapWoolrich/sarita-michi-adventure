@@ -1,25 +1,178 @@
 import { useEffect, useRef, useState } from 'react';
-const DEBUG_MOBILE_INPUT = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugInput') === '1';
-const JOYSTICK_RADIUS = 56; const MOVE_DEADZONE = 0.1;
-const baseBtn = { border:'1px solid rgba(255,255,255,.6)', borderRadius:18, color:'#2f244f', fontWeight:800, boxShadow:'0 8px 20px rgba(76,44,120,.20)', backdropFilter:'blur(10px)' };
+import { PawIcon, JumpIcon, FastIcon } from '../components/Icons.jsx';
 
-export default function MobileGameInputLayer({ touchState, onCatch, onJump, onToggleSpeed, speedMode = 'normal', isCatInCaptureRange }) {
-  const layerRef = useRef(null); const moveTouchIdRef = useRef(null); const joystickOriginRef = useRef({ x: 0, y: 0 });
+const DEBUG_MOBILE_INPUT = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugInput') === '1';
+const JOYSTICK_RADIUS = 56;
+const MOVE_DEADZONE = 0.1;
+
+export default function MobileGameInputLayer({
+  touchState,
+  onCatch,
+  onJump,
+  onToggleSpeed,
+  speedMode = 'normal',
+  isCatInCaptureRange
+}) {
+  const layerRef = useRef(null);
+  const moveTouchIdRef = useRef(null);
+  const joystickOriginRef = useRef({ x: 0, y: 0 });
   const [joystickVisual, setJoystickVisual] = useState({ active: false, x: 0, y: 0, centerX: 0, centerY: 0 });
-  useEffect(() => { const layer = layerRef.current; if (!layer) return; const resetJoystick = () => { touchState.current.joystick.active = false; touchState.current.joystick.x = 0; touchState.current.joystick.y = 0; touchState.current.joystick.magnitude = 0; touchState.current.joy = touchState.current.joystick; setJoystickVisual((s) => ({ ...s, active: false, x: 0, y: 0 })); };
-    const onTouchStart = (event) => { for (const touch of Array.from(event.changedTouches)) { const target = document.elementFromPoint(touch.clientX, touch.clientY) || event.target; if (target?.closest?.('[data-game-ui="true"]')) continue; const vw = window.innerWidth; const vh = window.innerHeight; const leftMoveZone = touch.clientX <= vw * 0.45 && touch.clientY >= vh * 0.35; if (leftMoveZone && moveTouchIdRef.current == null) { moveTouchIdRef.current = touch.identifier; joystickOriginRef.current = { x: touch.clientX, y: touch.clientY }; touchState.current.joystick.active = true; touchState.current.joy = touchState.current.joystick; setJoystickVisual({ active: true, x: 0, y: 0, centerX: touch.clientX, centerY: touch.clientY }); event.preventDefault(); break; } } };
-    const onTouchMove = (event) => { for (const touch of Array.from(event.changedTouches)) { if (touch.identifier !== moveTouchIdRef.current) continue; const dx = touch.clientX - joystickOriginRef.current.x; const dy = touch.clientY - joystickOriginRef.current.y; const magPx = Math.hypot(dx, dy); const clampedMag = Math.min(1, magPx / JOYSTICK_RADIUS); const nx = magPx > 0 ? dx / magPx : 0; const ny = magPx > 0 ? dy / magPx : 0; const rawX = nx * clampedMag; const rawY = ny * clampedMag; const mag = Math.hypot(rawX, rawY); const joystick = touchState.current.joystick; if (mag < MOVE_DEADZONE) joystick.x = joystick.y = joystick.magnitude = 0; else { joystick.x = Math.max(-1, Math.min(1, rawX)); joystick.y = Math.max(-1, Math.min(1, rawY)); joystick.magnitude = Math.min(1, mag); } joystick.active = true; touchState.current.joy = joystick; setJoystickVisual((s) => ({ ...s, active: true, x: joystick.x * JOYSTICK_RADIUS * 0.6, y: joystick.y * JOYSTICK_RADIUS * 0.6 })); event.preventDefault(); } };
-    const onTouchEnd = (event) => { for (const touch of Array.from(event.changedTouches)) { if (touch.identifier === moveTouchIdRef.current) { moveTouchIdRef.current = null; resetJoystick(); event.preventDefault(); } } };
-    layer.addEventListener('touchstart', onTouchStart, { passive: false }); layer.addEventListener('touchmove', onTouchMove, { passive: false }); layer.addEventListener('touchend', onTouchEnd, { passive: false }); layer.addEventListener('touchcancel', onTouchEnd, { passive: false });
-    return () => { layer.removeEventListener('touchstart', onTouchStart); layer.removeEventListener('touchmove', onTouchMove); layer.removeEventListener('touchend', onTouchEnd); layer.removeEventListener('touchcancel', onTouchEnd); };
+
+  useEffect(() => {
+    const layer = layerRef.current;
+    if (!layer) return;
+
+    const resetJoystick = () => {
+      touchState.current.joystick.active = false;
+      touchState.current.joystick.x = 0;
+      touchState.current.joystick.y = 0;
+      touchState.current.joystick.magnitude = 0;
+      touchState.current.joy = touchState.current.joystick;
+      setJoystickVisual((s) => ({ ...s, active: false, x: 0, y: 0 }));
+    };
+
+    const onTouchStart = (event) => {
+      for (const touch of Array.from(event.changedTouches)) {
+        const target = document.elementFromPoint(touch.clientX, touch.clientY) || event.target;
+        if (target?.closest?.('[data-game-ui="true"]')) continue;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const leftMoveZone = touch.clientX <= vw * 0.45 && touch.clientY >= vh * 0.35;
+        if (leftMoveZone && moveTouchIdRef.current == null) {
+          moveTouchIdRef.current = touch.identifier;
+          joystickOriginRef.current = { x: touch.clientX, y: touch.clientY };
+          touchState.current.joystick.active = true;
+          touchState.current.joy = touchState.current.joystick;
+          setJoystickVisual({ active: true, x: 0, y: 0, centerX: touch.clientX, centerY: touch.clientY });
+          event.preventDefault();
+          break;
+        }
+      }
+    };
+
+    const onTouchMove = (event) => {
+      for (const touch of Array.from(event.changedTouches)) {
+        if (touch.identifier !== moveTouchIdRef.current) continue;
+        const dx = touch.clientX - joystickOriginRef.current.x;
+        const dy = touch.clientY - joystickOriginRef.current.y;
+        const magPx = Math.hypot(dx, dy);
+        const clampedMag = Math.min(1, magPx / JOYSTICK_RADIUS);
+        const nx = magPx > 0 ? dx / magPx : 0;
+        const ny = magPx > 0 ? dy / magPx : 0;
+        const rawX = nx * clampedMag;
+        const rawY = ny * clampedMag;
+        const mag = Math.hypot(rawX, rawY);
+        const joystick = touchState.current.joystick;
+        if (mag < MOVE_DEADZONE) {
+          joystick.x = joystick.y = joystick.magnitude = 0;
+        } else {
+          joystick.x = Math.max(-1, Math.min(1, rawX));
+          joystick.y = Math.max(-1, Math.min(1, rawY));
+          joystick.magnitude = Math.min(1, mag);
+        }
+        joystick.active = true;
+        touchState.current.joy = joystick;
+        setJoystickVisual((s) => ({ ...s, active: true, x: joystick.x * JOYSTICK_RADIUS * 0.6, y: joystick.y * JOYSTICK_RADIUS * 0.6 }));
+        event.preventDefault();
+      }
+    };
+
+    const onTouchEnd = (event) => {
+      for (const touch of Array.from(event.changedTouches)) {
+        if (touch.identifier === moveTouchIdRef.current) {
+          moveTouchIdRef.current = null;
+          resetJoystick();
+          event.preventDefault();
+        }
+      }
+    };
+
+    layer.addEventListener('touchstart', onTouchStart, { passive: false });
+    layer.addEventListener('touchmove', onTouchMove, { passive: false });
+    layer.addEventListener('touchend', onTouchEnd, { passive: false });
+    layer.addEventListener('touchcancel', onTouchEnd, { passive: false });
+    return () => {
+      layer.removeEventListener('touchstart', onTouchStart);
+      layer.removeEventListener('touchmove', onTouchMove);
+      layer.removeEventListener('touchend', onTouchEnd);
+      layer.removeEventListener('touchcancel', onTouchEnd);
+    };
   }, [touchState]);
-  return <div ref={layerRef} className="mobile-game-input-layer" style={{ position: 'fixed', inset: 0, zIndex: 52, touchAction: 'none' }}>
-    {joystickVisual.active && <div style={{ position: 'fixed', left: joystickVisual.centerX - JOYSTICK_RADIUS, top: joystickVisual.centerY - JOYSTICK_RADIUS, width: JOYSTICK_RADIUS * 2, height: JOYSTICK_RADIUS * 2, borderRadius: '50%', border: '2px solid rgba(255,255,255,.85)', background: 'rgba(255,255,255,.12)', pointerEvents: 'none' }}><div style={{ position: 'absolute', left: JOYSTICK_RADIUS + joystickVisual.x - 18, top: JOYSTICK_RADIUS + joystickVisual.y - 18, width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,.9)' }} /></div>}
-    <div data-game-ui="true" className="game-action-buttons" style={{ position: 'fixed', right: 'max(10px, env(safe-area-inset-right))', bottom: 'max(12px,env(safe-area-inset-bottom))', zIndex: 85, display:'flex', flexDirection:'column', gap:8, alignItems:'flex-end' }}>
-      <button data-game-ui="true" style={{...baseBtn,padding:'8px 12px',fontSize:13,background:'linear-gradient(145deg,#ffe5fa,#e5f4ff)'}} onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onToggleSpeed?.(); }}>⚡ {speedMode === 'fast' ? 'Rápido' : 'Normal'}</button>
-      <button data-game-ui="true" style={{...baseBtn,padding:'11px 15px',fontSize:15,background:'linear-gradient(145deg,#fff3ff,#f0e8ff)'}} onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onJump?.(); }}>⬆️ Saltar</button>
-      <button data-game-ui="true" className={`capture-button-premium ${isCatInCaptureRange ? 'catch-btn-ready' : ''}`} style={{...baseBtn,padding:'14px 22px',fontSize:18,background:isCatInCaptureRange?'linear-gradient(145deg,#ffe9a6,#ffafd2)':'linear-gradient(145deg,#ffd9ef,#ffc7e2)',transform:isCatInCaptureRange?'scale(1.03)':'scale(1)'}} onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onCatch(); }}>🐾 Atrapar</button>
+
+  return (
+    <div ref={layerRef} className="mobile-game-input-layer" style={{ position: 'fixed', inset: 0, zIndex: 52, touchAction: 'none' }}>
+      {/* Joystick visual */}
+      {joystickVisual.active && (
+        <div
+          style={{
+            position: 'fixed',
+            left: joystickVisual.centerX - JOYSTICK_RADIUS,
+            top: joystickVisual.centerY - JOYSTICK_RADIUS,
+            width: JOYSTICK_RADIUS * 2,
+            height: JOYSTICK_RADIUS * 2,
+            borderRadius: '50%',
+            border: '2px solid rgba(255,255,255,.85)',
+            background: 'radial-gradient(circle, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.05) 70%)',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 8px 24px rgba(76,44,120,.18)',
+            pointerEvents: 'none'
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              left: JOYSTICK_RADIUS + joystickVisual.x - 20,
+              top: JOYSTICK_RADIUS + joystickVisual.y - 20,
+              width: 40,
+              height: 40,
+              borderRadius: '50%',
+              background: 'linear-gradient(145deg, rgba(255,255,255,0.95), rgba(232,244,255,0.85))',
+              border: '1px solid rgba(255,255,255,.85)',
+              boxShadow: '0 4px 12px rgba(76,44,120,.25), inset 0 1px 0 rgba(255,255,255,.8)'
+            }}
+          />
+        </div>
+      )}
+
+      {/* Botones de acción */}
+      <div data-game-ui="true" className="kw-action-stack">
+        <button
+          data-game-ui="true"
+          className="kw-action-btn kw-action-btn-secondary"
+          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onToggleSpeed?.(); }}
+          aria-label="Velocidad"
+        >
+          <FastIcon />
+          {speedMode === 'fast' ? 'Rápido' : 'Normal'}
+        </button>
+        <button
+          data-game-ui="true"
+          className="kw-action-btn kw-action-btn-jump"
+          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onJump?.(); }}
+          aria-label="Saltar"
+        >
+          <JumpIcon />
+          Saltar
+        </button>
+        <button
+          data-game-ui="true"
+          className={`kw-action-btn kw-action-btn-catch ${isCatInCaptureRange ? 'kw-ready' : ''}`}
+          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onCatch(); }}
+          aria-label="Atrapar"
+        >
+          <PawIcon />
+          Atrapar
+        </button>
+      </div>
+
+      {DEBUG_MOBILE_INPUT && (
+        <div data-game-ui="true" style={{ position: 'fixed', left: 8, top: 96, zIndex: 90, background: 'rgba(0,0,0,.75)', color: '#fff', fontSize: 11, padding: 8, borderRadius: 8, fontFamily: 'monospace' }}>
+          <div>moveTouchId: {String(moveTouchIdRef.current)}</div>
+          <div>joy.x: {touchState.current.joystick.x.toFixed(2)}</div>
+          <div>joy.y: {touchState.current.joystick.y.toFixed(2)}</div>
+          <div>joy.magnitude: {touchState.current.joystick.magnitude.toFixed(2)}</div>
+        </div>
+      )}
     </div>
-    {DEBUG_MOBILE_INPUT && <div data-game-ui="true" style={{ position: 'fixed', left: 8, top: 96, zIndex: 90, background: 'rgba(0,0,0,.75)', color: '#fff', fontSize: 11, padding: 8, borderRadius: 8, fontFamily: 'monospace' }}><div>moveTouchId: {String(moveTouchIdRef.current)}</div><div>joy.x: {touchState.current.joystick.x.toFixed(2)}</div><div>joy.y: {touchState.current.joystick.y.toFixed(2)}</div><div>joy.magnitude: {touchState.current.joystick.magnitude.toFixed(2)}</div></div>}
-  </div>;
+  );
 }

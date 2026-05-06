@@ -1,23 +1,68 @@
-const SPAWN_POINTS = [
-  [-20, 0.72, -18], [18, 0.72, -17], [22, 0.72, 8], [-16, 0.72, 19], [0, 0.72, -24],
-  [8, 0.72, 22], [-24, 0.72, 4], [24, 0.72, -4], [-8, 0.72, -10], [12, 0.72, 12]
-];
+/**
+ * Spawn de michis en zonas seguras:
+ * - Anillo interno (radio 5..12) — siempre visible, ANTES de los árboles del bioma (que empiezan en r≈11).
+ * - Distribución áurea (137.5°) para que se vean bien repartidos sin solaparse.
+ * - Sin colocarse encima de cualquier feature central (montañas, faro, torii, lago).
+ * Cada gato lleva un offset de fase y un radio de ronda para su IA de wander.
+ */
+
 const CAT_PROFILES = [
-  { id:'mochi', name:'Mochi', color:'#ffd6c5' }, { id:'luna', name:'Luna', color:'#c7dcff' }, { id:'kiki', name:'Kiki', color:'#ffe28d' },
-  { id:'yuki', name:'Yuki', color:'#f7f7ff' }, { id:'sakura', name:'Sakura', color:'#ffc6df' }, { id:'niko', name:'Niko', color:'#c2f5db' }
+  { id: 'mochi', name: 'Mochi', color: '#ffd6c5' },
+  { id: 'luna', name: 'Luna', color: '#c7dcff' },
+  { id: 'kiki', name: 'Kiki', color: '#ffe28d' },
+  { id: 'yuki', name: 'Yuki', color: '#f7f7ff' },
+  { id: 'sakura', name: 'Sakura', color: '#ffc6df' },
+  { id: 'niko', name: 'Niko', color: '#c2f5db' }
 ];
+
+/**
+ * Devuelve la zona segura para spawn según el bioma — evita los features centrales
+ * que están al norte (lago, faro, torii, montaña).
+ */
+function getSafeSpawnZones(worldTheme) {
+  // Por defecto, círculo completo en el anillo seguro.
+  const all = [0, Math.PI * 2];
+  // Mundos con feature al norte: limitar a la mitad sur (PI..2PI) para evitar superposición.
+  const featureNorthThemes = new Set([
+    'sakura-city',     // Torii al norte
+    'crystal-lake',    // Lago al norte
+    'pastel-port',     // Faro/mar al este — no critical
+    'aurora-mountain', // Montañas al norte
+    'stellar-village'  // Planeta al norte
+  ]);
+  if (featureNorthThemes.has(worldTheme)) {
+    return [Math.PI * 0.15, Math.PI * 1.85]; // evita la franja directa al norte
+  }
+  return all;
+}
+
+const GOLDEN = Math.PI * (3 - Math.sqrt(5)); // 137.5° en radianes
 
 export function generateLevelCats(worldConfig, levelConfig) {
   const count = Number(levelConfig?.catCount ?? 0);
+  const worldTheme = worldConfig?.theme ?? 'mystic-forest';
+  const [aMin, aMax] = getSafeSpawnZones(worldTheme);
+  const arc = aMax - aMin;
+
   return Array.from({ length: count }, (_, index) => {
     const profile = CAT_PROFILES[index % CAT_PROFILES.length];
-    const position = SPAWN_POINTS[index % SPAWN_POINTS.length];
+    // Distribución áurea dentro del arco seguro
+    const angle = aMin + ((index * GOLDEN) % arc);
+    const radius = 5.5 + (index % 4) * 1.6 + ((index * 0.7) % 1.4); // 5.5 .. 11
+    const x = Math.cos(angle) * radius;
+    const z = Math.sin(angle) * radius;
+    const y = 0.95; // ligeramente más alto para asegurar visibilidad por encima de hierba/props
+
     return {
       id: `${worldConfig.id}-${levelConfig.id}-${profile.id}-${index}`,
       profileId: profile.id,
       name: profile.name,
       color: worldConfig.palette[index % worldConfig.palette.length] ?? profile.color,
-      position,
+      position: [x, y, z],
+      anchor: [x, y, z],            // punto de origen para wander AI
+      wanderRadius: 1.8 + (index % 3) * 0.4, // radio de paseo
+      phase: (index * 0.73) % (Math.PI * 2), // fase única para movimiento
+      speed: 0.4 + ((index * 0.31) % 0.5),    // velocidad de wander
       points: 100
     };
   });
