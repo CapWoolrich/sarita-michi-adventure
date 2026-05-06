@@ -9,7 +9,7 @@ import * as THREE from 'three';
 const MOUNTAIN_PROFILES = {
   'mystic-forest': {
     count: 16,
-    radius: [55, 80],
+    radius: [110, 160],
     height: [6, 10],
     width: 11,
     color: '#5a8a52',
@@ -18,7 +18,7 @@ const MOUNTAIN_PROFILES = {
   },
   'sakura-city': {
     count: 14,
-    radius: [55, 78],
+    radius: [110, 156],
     height: [5, 9],
     width: 10,
     color: '#b88aa0',
@@ -27,7 +27,7 @@ const MOUNTAIN_PROFILES = {
   },
   'crystal-lake': {
     count: 18,
-    radius: [55, 80],
+    radius: [110, 160],
     height: [7, 13],
     width: 7,
     color: '#7a9bb8',
@@ -36,7 +36,7 @@ const MOUNTAIN_PROFILES = {
   },
   'mist-grove': {
     count: 12,
-    radius: [55, 80],
+    radius: [110, 160],
     height: [8, 14],
     width: 9,
     color: '#5d6f60',
@@ -46,7 +46,7 @@ const MOUNTAIN_PROFILES = {
   },
   'pastel-port': {
     count: 12,
-    radius: [60, 85],
+    radius: [120, 170],
     height: [4, 7],
     width: 12,
     color: '#a89580',
@@ -55,7 +55,7 @@ const MOUNTAIN_PROFILES = {
   },
   'cloud-valley': {
     count: 14,
-    radius: [55, 85],
+    radius: [110, 170],
     height: [5, 9],
     width: 9,
     color: '#a8b5d0',
@@ -64,7 +64,7 @@ const MOUNTAIN_PROFILES = {
   },
   'moon-garden': {
     count: 14,
-    radius: [55, 80],
+    radius: [110, 160],
     height: [7, 12],
     width: 9,
     color: '#2a2545',
@@ -73,7 +73,7 @@ const MOUNTAIN_PROFILES = {
   },
   'cotton-beach': {
     count: 10,
-    radius: [60, 85],
+    radius: [120, 170],
     height: [3, 5],
     width: 14,
     color: '#d8c0a0',
@@ -82,7 +82,7 @@ const MOUNTAIN_PROFILES = {
   },
   'aurora-mountain': {
     count: 16,
-    radius: [50, 78],
+    radius: [100, 156],
     height: [10, 18],
     width: 11,
     color: '#3a4d62',
@@ -92,7 +92,7 @@ const MOUNTAIN_PROFILES = {
   },
   'stellar-village': {
     count: 16,
-    radius: [55, 85],
+    radius: [110, 170],
     height: [4, 9],
     width: 7,
     color: '#3a2e5a',
@@ -101,7 +101,7 @@ const MOUNTAIN_PROFILES = {
   },
   'neon-city': {
     count: 14,
-    radius: [60, 85],
+    radius: [120, 170],
     height: [10, 18],
     width: 6,
     color: '#1a1a3a',
