@@ -6,7 +6,7 @@ const DEBUG_MOBILE_INPUT =
 const JOYSTICK_RADIUS = 56;
 const MOVE_DEADZONE = 0.1;
 
-export default function MobileGameInputLayer({ touchState, onCatch, isCatInCaptureRange }) {
+export default function MobileGameInputLayer({ touchState, onCatch, onJump, onToggleSpeed, speedMode = 'normal', isCatInCaptureRange }) {
   const layerRef = useRef(null);
   const moveTouchIdRef = useRef(null);
   const joystickOriginRef = useRef({ x: 0, y: 0 });
@@ -95,7 +95,11 @@ export default function MobileGameInputLayer({ touchState, onCatch, isCatInCaptu
     {joystickVisual.active && <div style={{ position: 'fixed', left: joystickVisual.centerX - JOYSTICK_RADIUS, top: joystickVisual.centerY - JOYSTICK_RADIUS, width: JOYSTICK_RADIUS * 2, height: JOYSTICK_RADIUS * 2, borderRadius: '50%', border: '2px solid rgba(255,255,255,.85)', background: 'rgba(255,255,255,.12)', pointerEvents: 'none' }}>
       <div style={{ position: 'absolute', left: JOYSTICK_RADIUS + joystickVisual.x - 18, top: JOYSTICK_RADIUS + joystickVisual.y - 18, width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,.9)' }} />
     </div>}
-    <button data-game-ui="true" className={`catch-btn mobile ${isCatInCaptureRange ? 'catch-btn-ready' : ''}`} onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); onCatch(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCatch(); }} style={{ position: 'fixed', right: 20, bottom: 'max(16px,env(safe-area-inset-bottom))', zIndex: 70 }}>🐾 Atrapar</button>
+    <div data-game-ui="true" style={{ position: 'fixed', right: 20, bottom: 'max(16px,env(safe-area-inset-bottom))', zIndex: 70, display:'flex', flexDirection:'column', gap:10 }}>
+      <button data-game-ui="true" className="catch-btn mobile" onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); onToggleSpeed?.(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleSpeed?.(); }}>⚡ {speedMode === 'fast' ? 'Rápido' : 'Normal'}</button>
+      <button data-game-ui="true" className="catch-btn mobile" onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); onJump?.(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onJump?.(); }}>⬆️ Saltar</button>
+      <button data-game-ui="true" className={`catch-btn mobile ${isCatInCaptureRange ? 'catch-btn-ready' : ''}`} onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); onCatch(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCatch(); }}>🐾 Atrapar</button>
+    </div>
     {DEBUG_MOBILE_INPUT && <div data-game-ui="true" style={{ position: 'fixed', left: 8, top: 96, zIndex: 90, background: 'rgba(0,0,0,.75)', color: '#fff', fontSize: 11, padding: 8, borderRadius: 8, fontFamily: 'monospace' }}>
       <div>moveTouchId: {String(moveTouchIdRef.current)}</div>
       <div>joy.x: {touchState.current.joystick.x.toFixed(2)}</div><div>joy.y: {touchState.current.joystick.y.toFixed(2)}</div>

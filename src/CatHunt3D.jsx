@@ -108,6 +108,7 @@ const CATCH_DISTANCE = 4;
 const safeRead = (k, f) => { try { const v = localStorage.getItem(k); return v == null ? f : JSON.parse(v); } catch { return f; } };
 const getMovementVector = (yaw, fwd, right) => ({ x: fwd * -Math.sin(yaw) + right * Math.cos(yaw), z: fwd * -Math.cos(yaw) + right * -Math.sin(yaw) });
 const DEBUG_CAMERA = false;
+const DEBUG_INPUT = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugInput') === '1';
 
 export default function CatHunt3D() {
   const [screen, setScreen] = useState('menu');
@@ -130,6 +131,8 @@ export default function CatHunt3D() {
   const [isCatInCaptureRange, setIsCatInCaptureRange] = useState(false);
   const [capturedCatIds3D, setCapturedCatIds3D] = useState([]);
   const [levelStartNonce, setLevelStartNonce] = useState(0);
+  const [speedMode, setSpeedMode] = useState('normal');
+  const [jumpNonce, setJumpNonce] = useState(0);
   const rescueToastTimeoutRef = useRef(null);
   const [paused, setPaused] = useState(false);
   const [lastFoundProfiles, setLastFoundProfiles] = useState([]);
@@ -286,6 +289,7 @@ export default function CatHunt3D() {
 
 
   const handle3DCatCaptured = useCallback((catId) => {
+    const profile = MICHI_PROFILES[(levelIndex * 2 + catId) % MICHI_PROFILES.length];
     let capturedNow = false;
     setCapturedCatIds3D((prev) => {
       if (prev.includes(catId)) return prev;
@@ -296,11 +300,16 @@ export default function CatHunt3D() {
     game3dRef.current?.triggerCatchAnimation?.(catId);
     setFound((f) => f + 1);
     setScore((sc) => sc + 120);
+    setRescuedMichis((r) => (r.includes(profile.id) ? r : [...r, profile.id]));
+    setLastFoundProfiles((lf) => (lf.some((p) => p.id === profile.id) ? lf : [...lf, profile]));
+    showRescueToast(`¡Rescataste a ${profile.name}! · ${profile.personality} 🌸`);
     setHint('¡Michi rescatado!');
     playSfx('meowCatch');
     playSfx('sparkle');
     return true;
-  }, [playSfx]);
+  }, [levelIndex, playSfx]);
+
+  const handleJumpAction = useCallback(() => { setJumpNonce((n) => n + 1); game3dRef.current?.requestJump?.(); }, []);
 
   const handleCatchAction = useCallback(() => {
     playSfx('tap');
@@ -323,6 +332,8 @@ export default function CatHunt3D() {
     setIsCatInCaptureRange(false);
     setPlayerPosition3D({ x: 0, y: 0, z: 0 });
     setLevelStartNonce((n) => n + 1);
+    setSpeedMode('normal');
+    setJumpNonce(0);
     if (reset) { setScore(0); setLevelIndex(0); }
     else setLevelIndex(targetIndex);
     setScreen('playing');
@@ -339,7 +350,7 @@ export default function CatHunt3D() {
 
     {screen === 'playing' && <div className="gameplay-screen">
       <div ref={mountRef} style={{ position: 'fixed', inset: 0, opacity: 0, pointerEvents: 'none' }} />
-      <Game3DCanvas key={`${levelIndex}-${levelStartNonce}`} ref={game3dRef} touchState={touchState} catCount={LEVELS[levelIndex].cats} captureRadius={2} isPaused={paused} isLevelComplete={screen === 'levelComplete'} onPlayerPositionChange={setPlayerPosition3D} onNearestCatChange={(id, distance, inRange) => { setNearestCatId(id); setNearestCatDistance(distance); setIsCatInCaptureRange(inRange); }} />
+      <Game3DCanvas key={`${levelIndex}-${levelStartNonce}`} ref={game3dRef} touchState={touchState} catCount={LEVELS[levelIndex].cats} captureRadius={2.2} isPaused={paused} isLevelComplete={screen === 'levelComplete'} capturedCatIds={capturedCatIds3D} speedMode={speedMode} jumpNonce={jumpNonce} onPlayerPositionChange={setPlayerPosition3D} onNearestCatChange={(id, distance, inRange) => { setNearestCatId(id); setNearestCatDistance(distance); setIsCatInCaptureRange(inRange); }} />
       <div className="level-world-backdrop" aria-hidden="true"><div className="floating-clouds"/><div className="sparkle-particles"/></div>
       <header className="integrated-hud" data-game-ui="true">
         <div className="hud-world">
@@ -357,8 +368,12 @@ export default function CatHunt3D() {
           <button data-game-ui="true" className="hud-icon-btn" aria-label="Volver al menú" onClick={() => { setScreen('menu'); stopGame(); }}>🏠</button>
         </div>
       </header>
-      {isMobile && <MobileGameInputLayer touchState={touchState} isCatInCaptureRange={isCatInCaptureRange} onCatch={handleCatchAction}  />}
-      {!isMobile && <button className={`catch-btn ${isCatInCaptureRange ? 'catch-btn-ready' : ''}`} onClick={handleCatchAction} style={{ position: 'fixed', right: 14, bottom: 14, zIndex: 25 }}>🐾 Atrapar gatito</button>}
+      {isMobile && <MobileGameInputLayer touchState={touchState} isCatInCaptureRange={isCatInCaptureRange} onCatch={handleCatchAction} onJump={handleJumpAction} speedMode={speedMode} onToggleSpeed={() => setSpeedMode((m) => (m === 'fast' ? 'normal' : 'fast'))}  />}
+      {!isMobile && <div data-game-ui="true" style={{ position: 'fixed', right: 14, bottom: 14, zIndex: 25, display:'flex', gap:8 }}>
+        <button data-game-ui="true" className="catch-btn" onClick={() => setSpeedMode((m) => (m === 'fast' ? 'normal' : 'fast'))}>⚡ {speedMode === 'fast' ? 'Rápido' : 'Normal'}</button>
+        <button data-game-ui="true" className="catch-btn" onClick={handleJumpAction}>⬆️ Saltar</button>
+        <button data-game-ui="true" className={`catch-btn ${isCatInCaptureRange ? 'catch-btn-ready' : ''}`} onClick={handleCatchAction}>🐾 Atrapar gatito</button>
+      </div>}
       <div style={{ position: 'fixed', bottom: 16, left: 0, right: 0, textAlign: 'center', color: '#fff', fontWeight: 700, textShadow: '0 2px 6px #000' }}>{hint}</div>
       {rescueToast && <div style={{ position: 'fixed', top: '18%', left: '50%', transform: 'translateX(-50%)', zIndex: 22, background: 'rgba(255,105,173,.88)', color: '#fff', padding: '8px 12px', borderRadius: 999, pointerEvents: 'none', animation: 'fadeToast 1.4s ease forwards' }}>{rescueToast}</div>}
       {paused && <Panel title='Juego en pausa'><button onClick={() => setPaused(false)}>Continuar</button><button onClick={() => startLevel(levelIndex)}>Reiniciar nivel</button><button onClick={() => { setScreen('menu'); stopGame(); }}>Menú</button></Panel>}
@@ -367,6 +382,14 @@ export default function CatHunt3D() {
     {screen === 'levelComplete' && <div className="level-complete-shell"><div className="level-complete-card"><div className="lc-scroll"><div><h2>¡Nivel completado!</h2><p>{LEVEL_STORY[Math.min(levelIndex + 1, LEVEL_STORY.length - 1)]}</p><p className="lc-world">🌎 {LEVELS[Math.min(levelIndex + 1, LEVELS.length - 1)].name}</p></div><div><h3>Gatitos encontrados</h3>{lastFoundProfiles.map((p) => <div key={p.id} className="lc-cat">🐱 {p.name} — {p.personality}</div>)}</div></div><div className="lc-footer"><button className="next-btn" onClick={() => { playSfx('nextLevel'); startLevel(levelIndex + 1); }}>Siguiente nivel</button></div></div></div>}
     {screen === 'complete' && <Panel title='Misión completa ✨'><SaritaMascot /><p>Puntuación final: {score}</p><button onClick={() => startLevel(0, true)}>Jugar de nuevo</button></Panel>}
     {screen === 'gameover' && <Panel title='Game Over'><button onClick={() => startLevel(levelIndex)}>Reintentar</button><button onClick={() => setScreen('menu')}>Menú</button></Panel>}
+    {DEBUG_INPUT && screen === 'playing' && <div data-game-ui="true" style={{ position:'fixed', left:8, top:160, zIndex:95, background:'rgba(0,0,0,.75)', color:'#fff', padding:8, borderRadius:8, fontSize:11, fontFamily:'monospace' }}>
+      <div>capturedCatIds.length: {capturedCatIds3D.length}</div>
+      <div>totalCats: {LEVELS[levelIndex].cats}</div>
+      <div>nearestCatId: {String(nearestCatId)}</div>
+      <div>nearestCatDistance: {Number.isFinite(nearestCatDistance) ? nearestCatDistance.toFixed(2) : '∞'}</div>
+      <div>isCatInCaptureRange: {String(isCatInCaptureRange)}</div>
+      <div>speedMode: {speedMode}</div>
+    </div>}
     {achievementToast && <div style={{ position: 'fixed', top: 70, right: 12, zIndex: 40, background: 'rgba(255,255,255,.92)', padding: '10px 12px', borderRadius: 12 }}>{achievementToast}</div>}
     <style>{cssSkin}</style>
   </div>;
