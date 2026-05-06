@@ -7,7 +7,7 @@ import useRobloxLikeControls from './useRobloxLikeControls';
 
 const DEBUG_INPUT = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugInput') === '1';
 
-function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPaused, isLevelComplete, onNearestCatChange, onDebugUpdate, speedMode, jumpRequestedRef, levelIndex, playerPositionRef }) {
+function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPaused, isLevelComplete, onNearestCatChange, onDebugUpdate, speedMode, jumpRequestedRef, levelIndex, playerPositionRef, worldTheme }) {
   const characterRef = useRef();
   useRobloxLikeControls({ characterRef, touchState, isPaused, isLevelComplete, onDebugUpdate, speedMode, jumpRequestedRef });
   useFrame(() => {
@@ -25,7 +25,7 @@ function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPau
     onNearestCatChange?.(nearestCat?.id ?? null, nearestDistance, nearestDistance <= 2.6);
   });
   return <>
-    <WorldScene levelIndex={levelIndex} />
+    <WorldScene levelIndex={levelIndex} worldTheme={worldTheme} />
     {cats.map((cat) => {
       if (capturedCatIds.includes(cat.id)) return null;
       const player = playerPositionRef.current;
@@ -37,7 +37,7 @@ function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPau
   </>;
 }
 
-export default forwardRef(function Game3DCanvas({ touchState, cats, capturedCatIds, isPaused, isLevelComplete, speedMode, levelIndex, onNearestCatChange }, ref) {
+export default forwardRef(function Game3DCanvas({ touchState, cats, capturedCatIds, isPaused, isLevelComplete, speedMode, levelIndex, onNearestCatChange, worldTheme }, ref) {
   const localTouchState = useRef({ joystick:{x:0,y:0,magnitude:0,active:false}, joy: { x: 0, y: 0, magnitude: 0 }, look: { dx: 0, dy: 0 } });
   const stateRef = touchState || localTouchState;
   const captureStateRef = useRef({}); const jumpRequestedRef = useRef(false); const [debugState, setDebugState] = useState({}); const playerPositionRef = useRef(null);
@@ -50,6 +50,6 @@ export default forwardRef(function Game3DCanvas({ touchState, cats, capturedCatI
       return { success: true, catId: nearestCat.id, distance: nearestDistance };
     }
   }), []);
-  return <div style={{ position:'fixed', inset:0 }}><Canvas><SceneRuntime touchState={stateRef} cats={cats} capturedCatIds={capturedCatIds} captureStateRef={captureStateRef} isPaused={isPaused} isLevelComplete={isLevelComplete} onNearestCatChange={onNearestCatChange} onDebugUpdate={DEBUG_INPUT ? setDebugState : undefined} speedMode={speedMode} jumpRequestedRef={jumpRequestedRef} levelIndex={levelIndex} playerPositionRef={playerPositionRef} /></Canvas>
+  return <div style={{ position:'fixed', inset:0 }}><Canvas><SceneRuntime touchState={stateRef} cats={cats} capturedCatIds={capturedCatIds} captureStateRef={captureStateRef} isPaused={isPaused} isLevelComplete={isLevelComplete} onNearestCatChange={onNearestCatChange} onDebugUpdate={DEBUG_INPUT ? setDebugState : undefined} speedMode={speedMode} jumpRequestedRef={jumpRequestedRef} levelIndex={levelIndex} playerPositionRef={playerPositionRef} worldTheme={worldTheme} /></Canvas>
   {DEBUG_INPUT && <pre style={{ position:'fixed', top:88, right:6, zIndex:99, background:'#0009', color:'#fff', fontSize:10 }}>{JSON.stringify(debugState, null, 2)}</pre>}</div>;
 });
