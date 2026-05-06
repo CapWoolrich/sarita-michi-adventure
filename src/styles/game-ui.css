@@ -1120,3 +1120,333 @@ body { overflow: hidden; }
 .kw-ach-toast-meta { display: flex; flex-direction: column; }
 .kw-ach-toast-meta small { font-size: 10px; color: var(--kw-text-soft); letter-spacing: 0.4px; text-transform: uppercase; font-weight: 700; }
 .kw-ach-toast-meta strong { font-size: 14px; color: var(--kw-text); }
+
+/* ============================================
+   PHASE 8 — Pause / Settings / Tutorial / MiniMap / FOMO
+   ============================================ */
+
+/* MINI MAP */
+.kw-minimap {
+  position: fixed;
+  top: max(72px, calc(env(safe-area-inset-top) + 60px));
+  left: max(10px, env(safe-area-inset-left));
+  z-index: 87;
+  background: linear-gradient(135deg, rgba(255,250,252,0.78), rgba(248,240,250,0.65));
+  backdrop-filter: var(--kw-blur);
+  border: 1px solid rgba(255,255,255,0.95);
+  border-radius: 50%;
+  padding: 4px;
+  box-shadow: 0 6px 18px rgba(35, 28, 78, 0.18);
+  pointer-events: none;
+  animation: kw-fade-down 0.5s ease-out;
+}
+
+/* PAUSE MENU */
+.kw-pause-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  background: rgba(22, 18, 42, 0.55);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  animation: kw-fade-in 0.25s ease-out;
+}
+
+.kw-pause-card {
+  width: min(360px, 90%);
+  background: linear-gradient(180deg, rgba(255, 250, 252, 0.95), rgba(248, 240, 250, 0.92));
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 30px 70px rgba(35, 28, 78, 0.45);
+  border-radius: 26px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: kw-trans-card-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.kw-pause-title {
+  font-size: 24px;
+  font-weight: 900;
+  color: #6e3f9a;
+  font-family: 'Georgia', serif;
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.kw-pause-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  background: linear-gradient(135deg, #c084fc, #ec4899);
+  color: white;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(192, 132, 252, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: transform 0.12s ease;
+}
+.kw-pause-primary:active { transform: scale(0.96); }
+.kw-pause-primary svg { width: 18px; height: 18px; }
+
+.kw-pause-row {
+  display: flex;
+  gap: 8px;
+}
+
+.kw-pause-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(192, 132, 252, 0.3);
+  background: rgba(255, 255, 255, 0.7);
+  color: #5a4880;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.18s ease;
+}
+.kw-pause-btn:hover { background: rgba(255, 255, 255, 0.95); }
+.kw-pause-btn:active { transform: scale(0.95); }
+.kw-pause-btn svg { width: 16px; height: 16px; }
+
+.kw-pause-toggle { font-size: 12px; }
+.kw-pause-settings { background: rgba(192, 132, 252, 0.12); }
+
+/* SETTINGS PANEL */
+.kw-settings-panel {
+  width: min(440px, 100%);
+  border-radius: 26px;
+  background: linear-gradient(180deg, rgba(255, 250, 252, 0.95), rgba(248, 240, 250, 0.92));
+  backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 30px 70px rgba(35, 28, 78, 0.4);
+  overflow: hidden;
+  animation: kw-trans-card-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.kw-settings-body {
+  padding: 16px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.kw-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.kw-disabled { opacity: 0.5; }
+
+.kw-settings-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--kw-text);
+}
+
+.kw-settings-control {
+  display: flex;
+  align-items: center;
+}
+
+/* Switch */
+.kw-switch { position: relative; display: inline-block; width: 46px; height: 26px; }
+.kw-switch input { opacity: 0; width: 0; height: 0; }
+.kw-switch-slider {
+  position: absolute;
+  inset: 0;
+  background: rgba(192, 132, 252, 0.25);
+  border-radius: 999px;
+  transition: 0.25s;
+  cursor: pointer;
+}
+.kw-switch-slider::before {
+  content: '';
+  position: absolute;
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: 0.25s;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+.kw-switch input:checked + .kw-switch-slider { background: linear-gradient(135deg, #c084fc, #ec4899); }
+.kw-switch input:checked + .kw-switch-slider::before { transform: translateX(20px); }
+
+/* Range slider */
+.kw-slider {
+  width: 160px;
+  -webkit-appearance: none;
+  height: 6px;
+  background: rgba(192, 132, 252, 0.25);
+  border-radius: 999px;
+  outline: none;
+}
+.kw-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #c084fc, #ec4899);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(192, 132, 252, 0.5);
+}
+.kw-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #c084fc, #ec4899);
+  cursor: pointer;
+  border: none;
+}
+
+/* Select */
+.kw-select {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(192, 132, 252, 0.3);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--kw-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.kw-settings-hint {
+  font-size: 12px;
+  color: var(--kw-text-soft);
+  font-style: italic;
+  text-align: center;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(192, 132, 252, 0.2);
+}
+
+/* TUTORIAL */
+.kw-tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 145;
+  background: rgba(22, 18, 42, 0.55);
+  backdrop-filter: blur(10px);
+  display: grid;
+  place-items: center;
+  animation: kw-fade-in 0.3s ease-out;
+}
+
+.kw-tutorial-card {
+  width: min(380px, 90%);
+  border-radius: 26px;
+  background: linear-gradient(180deg, rgba(255, 250, 252, 0.96), rgba(248, 240, 250, 0.92));
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 30px 70px rgba(35, 28, 78, 0.45);
+  padding: 28px 24px 22px;
+  text-align: center;
+  animation: kw-trans-card-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.kw-tutorial-icon {
+  font-size: 56px;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+}
+
+.kw-tutorial-title {
+  margin: 4px 0 8px;
+  font-size: 22px;
+  font-weight: 900;
+  color: #6e3f9a;
+  font-family: 'Georgia', serif;
+}
+
+.kw-tutorial-body {
+  margin: 0 0 14px;
+  font-size: 14px;
+  color: var(--kw-text-soft);
+  line-height: 1.45;
+}
+
+.kw-tutorial-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.kw-tutorial-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(192, 132, 252, 0.25);
+  transition: all 0.25s ease;
+}
+
+.kw-tutorial-dot-on {
+  background: linear-gradient(135deg, #c084fc, #ec4899);
+  width: 22px;
+  border-radius: 999px;
+}
+
+.kw-tutorial-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+/* SPLASH FOMO STATS */
+.kw-splash-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.kw-splash-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  font-weight: 700;
+  color: #5a4880;
+  box-shadow: 0 3px 10px rgba(110, 63, 154, 0.12);
+}
+
+.kw-streak {
+  background: linear-gradient(135deg, rgba(255, 145, 100, 0.18), rgba(255, 200, 100, 0.18));
+  border-color: rgba(255, 145, 100, 0.4);
+  color: #b8542a;
+  animation: kw-streak-glow 2s ease-in-out infinite;
+}
+
+@keyframes kw-streak-glow {
+  0%, 100% { box-shadow: 0 3px 10px rgba(255, 145, 100, 0.3); }
+  50% { box-shadow: 0 3px 18px rgba(255, 145, 100, 0.55); }
+}
+
+.kw-golden {
+  background: linear-gradient(135deg, rgba(255, 208, 102, 0.25), rgba(255, 233, 155, 0.25));
+  border-color: rgba(255, 208, 102, 0.6);
+  color: #a87c1f;
+}

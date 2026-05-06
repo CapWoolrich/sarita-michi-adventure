@@ -7,9 +7,27 @@ import CatEntity3D from './CatEntity3D';
 import CaptureFX from './CaptureFX';
 import useRobloxLikeControls from './useRobloxLikeControls';
 import PostFX from './PostFX';
+import SaritaTrail from './SaritaTrail';
 
 const DEBUG_INPUT = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugInput') === '1';
 const DISABLE_FX = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('nofx') === '1';
+
+const makeSnapshot = (player, cats, capturedCatIds, livePositions) => {
+  const out = { player: player ? { x: player.x, z: player.z } : null, cats: [] };
+  if (!player) return out;
+  for (const cat of cats) {
+    if (capturedCatIds.includes(cat.id)) continue;
+    const live = livePositions[cat.id];
+    out.cats.push({
+      id: cat.id,
+      x: live?.x ?? cat.position[0],
+      z: live?.z ?? cat.position[2],
+      color: cat.color,
+      golden: !!cat.golden
+    });
+  }
+  return out;
+};
 
 function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPaused, isLevelComplete, onNearestCatChange, onDebugUpdate, speedMode, jumpRequestedRef, levelIndex, playerPositionRef, worldTheme, catLivePositionsRef, capturedFXList, removeFX, mapRadius }) {
   const characterRef = useRef();
@@ -77,12 +95,13 @@ function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPau
         <CaptureFX key={fx.id} position={[fx.x, fx.y, fx.z]} color={fx.color} onComplete={() => removeFX(fx.id)} />
       ))}
       <CharacterSarita3D characterRef={characterRef} animState="run" />
+      <SaritaTrail characterRef={characterRef} active={speedMode === 'fast'} />
     </>
   );
 }
 
 export default forwardRef(function Game3DCanvas(
-  { touchState, cats, capturedCatIds, isPaused, isLevelComplete, speedMode, levelIndex, onNearestCatChange, worldTheme, mapRadius = 28 },
+  { touchState, cats, capturedCatIds, isPaused, isLevelComplete, speedMode, levelIndex, onNearestCatChange, worldTheme, mapRadius = 28, lowQuality = false },
   ref
 ) {
   const localTouchState = useRef({
@@ -107,6 +126,8 @@ export default forwardRef(function Game3DCanvas(
     ref,
     () => ({
       requestJump: () => { jumpRequestedRef.current = true; },
+      getRadarSnapshot: () => makeSnapshot(playerPositionRef.current, cats, capturedCatIds, catLivePositionsRef.current),
+      isGolden: (catId) => cats.find((c) => c.id === catId)?.golden ?? false,
       attemptCatch: () => {
         const { nearestCat, nearestDistance } = captureStateRef.current;
         if (!nearestCat) return { success: false, reason: 'no_cat' };
@@ -153,7 +174,7 @@ export default forwardRef(function Game3DCanvas(
           removeFX={removeFX}
           mapRadius={mapRadius}
         />
-        {!DISABLE_FX && <PostFX />}
+        {!DISABLE_FX && !lowQuality && <PostFX />}
       </Canvas>
       {DEBUG_INPUT && (
         <pre style={{ position: 'fixed', top: 88, right: 6, zIndex: 99, background: '#0009', color: '#fff', fontSize: 10 }}>

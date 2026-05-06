@@ -44,6 +44,9 @@ export function generateLevelCats(worldConfig, levelConfig) {
   const [aMin, aMax] = getSafeSpawnZones(worldTheme);
   const arc = aMax - aMin;
 
+  // 25% chance de que aparezca un michi dorado en cualquier nivel (vale 500 pts)
+  const goldenIndex = Math.random() < 0.25 ? Math.floor(Math.random() * count) : -1;
+
   return Array.from({ length: count }, (_, index) => {
     const profile = CAT_PROFILES[index % CAT_PROFILES.length];
     // Distribución áurea dentro del arco seguro
@@ -53,17 +56,19 @@ export function generateLevelCats(worldConfig, levelConfig) {
     const z = Math.sin(angle) * radius;
     const y = 0.95; // ligeramente más alto para asegurar visibilidad por encima de hierba/props
 
+    const isGolden = index === goldenIndex;
     return {
       id: `${worldConfig.id}-${levelConfig.id}-${profile.id}-${index}`,
       profileId: profile.id,
-      name: profile.name,
-      color: worldConfig.palette[index % worldConfig.palette.length] ?? profile.color,
+      name: isGolden ? 'Michi Dorado' : profile.name,
+      color: isGolden ? '#ffd066' : (worldConfig.palette[index % worldConfig.palette.length] ?? profile.color),
+      golden: isGolden,
       position: [x, y, z],
-      anchor: [x, y, z],            // punto de origen para wander AI
-      wanderRadius: 1.8 + (index % 3) * 0.4, // radio de paseo
-      phase: (index * 0.73) % (Math.PI * 2), // fase única para movimiento
-      speed: 0.4 + ((index * 0.31) % 0.5),    // velocidad de wander
-      points: 100
+      anchor: [x, y, z],
+      wanderRadius: 1.8 + (index % 3) * 0.4,
+      phase: (index * 0.73) % (Math.PI * 2),
+      speed: 0.4 + ((index * 0.31) % 0.5),
+      points: isGolden ? 500 : 100
     };
   });
 }
