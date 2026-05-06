@@ -10,7 +10,11 @@ function SceneRuntime({ touchState }) {
   const characterRef = useRef();
   const cameraStateRef = useRef({ yaw: 0, pitch: 0.2, distance: 7 });
   const [animState, setAnimState] = useState('idle');
-  const cats = useMemo(() => Array.from({ length: 8 }, (_, i) => ({ id: i, x: (Math.random()-0.5)*32, z: (Math.random()-0.5)*32, phase: Math.random()*10, color: ['#ffe7b8','#dcc8ff','#c5f1e6','#ffd6ba'][i%4] })), []);
+  const cats = useMemo(() => Array.from({ length: 8 }, (_, i) => {
+    const angle = (i / 8) * Math.PI * 2 + Math.random() * 0.25;
+    const radius = 10 + Math.random() * 12;
+    return { id: i, x: Math.cos(angle) * radius, z: Math.sin(angle) * radius, phase: Math.random() * 10, color: ['#ffe7b8', '#dcc8ff', '#c5f1e6', '#ffd6ba'][i % 4] };
+  }), []);
 
   useFrame((_, delta) => {
     const joy = touchState.current.joy;
@@ -26,6 +30,8 @@ function SceneRuntime({ touchState }) {
     if (speed > 0.01) {
       dir.normalize();
       characterRef.current.position.addScaledVector(dir, Math.min(4.6 * delta, 0.12));
+      characterRef.current.position.x = THREE.MathUtils.clamp(characterRef.current.position.x, -36, 36);
+      characterRef.current.position.z = THREE.MathUtils.clamp(characterRef.current.position.z, -36, 36);
       characterRef.current.rotation.y = THREE.MathUtils.lerp(characterRef.current.rotation.y, Math.atan2(dir.x, dir.z), 0.16);
       setAnimState('run');
     } else setAnimState('idle');
