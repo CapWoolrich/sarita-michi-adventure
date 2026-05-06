@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 const DEBUG_MOBILE_INPUT = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugInput') === '1';
 const JOYSTICK_RADIUS = 56; const MOVE_DEADZONE = 0.1;
-const baseBtn = { border:'1px solid rgba(255,255,255,.5)', borderRadius:18, color:'#2f244f', fontWeight:800, boxShadow:'0 10px 24px rgba(76,44,120,.24)', backdropFilter:'blur(8px)' };
+const baseBtn = { border:'1px solid rgba(255,255,255,.6)', borderRadius:18, color:'#2f244f', fontWeight:800, boxShadow:'0 8px 20px rgba(76,44,120,.20)', backdropFilter:'blur(10px)' };
 
 export default function MobileGameInputLayer({ touchState, onCatch, onJump, onToggleSpeed, speedMode = 'normal', isCatInCaptureRange }) {
   const layerRef = useRef(null); const moveTouchIdRef = useRef(null); const joystickOriginRef = useRef({ x: 0, y: 0 });
@@ -15,10 +15,10 @@ export default function MobileGameInputLayer({ touchState, onCatch, onJump, onTo
   }, [touchState]);
   return <div ref={layerRef} className="mobile-game-input-layer" style={{ position: 'fixed', inset: 0, zIndex: 52, touchAction: 'none' }}>
     {joystickVisual.active && <div style={{ position: 'fixed', left: joystickVisual.centerX - JOYSTICK_RADIUS, top: joystickVisual.centerY - JOYSTICK_RADIUS, width: JOYSTICK_RADIUS * 2, height: JOYSTICK_RADIUS * 2, borderRadius: '50%', border: '2px solid rgba(255,255,255,.85)', background: 'rgba(255,255,255,.12)', pointerEvents: 'none' }}><div style={{ position: 'absolute', left: JOYSTICK_RADIUS + joystickVisual.x - 18, top: JOYSTICK_RADIUS + joystickVisual.y - 18, width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,.9)' }} /></div>}
-    <div data-game-ui="true" style={{ position: 'fixed', right: 14, bottom: 'max(14px,env(safe-area-inset-bottom))', zIndex: 70, display:'flex', flexDirection:'column', gap:10, alignItems:'flex-end' }}>
+    <div data-game-ui="true" className="game-action-buttons" style={{ position: 'fixed', right: 'max(10px, env(safe-area-inset-right))', bottom: 'max(12px,env(safe-area-inset-bottom))', zIndex: 85, display:'flex', flexDirection:'column', gap:8, alignItems:'flex-end' }}>
       <button data-game-ui="true" style={{...baseBtn,padding:'8px 12px',fontSize:13,background:'linear-gradient(145deg,#ffe5fa,#e5f4ff)'}} onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onToggleSpeed?.(); }}>⚡ {speedMode === 'fast' ? 'Rápido' : 'Normal'}</button>
       <button data-game-ui="true" style={{...baseBtn,padding:'11px 15px',fontSize:15,background:'linear-gradient(145deg,#fff3ff,#f0e8ff)'}} onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onJump?.(); }}>⬆️ Saltar</button>
-      <button data-game-ui="true" className={`catch-btn mobile ${isCatInCaptureRange ? 'catch-btn-ready' : ''}`} style={{...baseBtn,padding:'14px 20px',fontSize:18,background:isCatInCaptureRange?'linear-gradient(145deg,#ffe28f,#ffabd0)':'linear-gradient(145deg,#ffd2ed,#ffc1de)',transform:isCatInCaptureRange?'scale(1.03)':'scale(1)'}} onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onCatch(); }}>🐾 Atrapar</button>
+      <button data-game-ui="true" className={`capture-button-premium ${isCatInCaptureRange ? 'catch-btn-ready' : ''}`} style={{...baseBtn,padding:'14px 22px',fontSize:18,background:isCatInCaptureRange?'linear-gradient(145deg,#ffe9a6,#ffafd2)':'linear-gradient(145deg,#ffd9ef,#ffc7e2)',transform:isCatInCaptureRange?'scale(1.03)':'scale(1)'}} onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onCatch(); }}>🐾 Atrapar</button>
     </div>
     {DEBUG_MOBILE_INPUT && <div data-game-ui="true" style={{ position: 'fixed', left: 8, top: 96, zIndex: 90, background: 'rgba(0,0,0,.75)', color: '#fff', fontSize: 11, padding: 8, borderRadius: 8, fontFamily: 'monospace' }}><div>moveTouchId: {String(moveTouchIdRef.current)}</div><div>joy.x: {touchState.current.joystick.x.toFixed(2)}</div><div>joy.y: {touchState.current.joystick.y.toFixed(2)}</div><div>joy.magnitude: {touchState.current.joystick.magnitude.toFixed(2)}</div></div>}
   </div>;
