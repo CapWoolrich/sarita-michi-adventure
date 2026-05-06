@@ -6,6 +6,8 @@ import CharacterSarita3D from './CharacterSarita3D';
 import ThirdPersonCamera from './ThirdPersonCamera';
 import CatEntity3D from './CatEntity3D';
 
+const DEBUG_CAMERA = false;
+
 function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, onCameraStateChange, captureRadius = 2, nearestCatIdRef, nearestInRangeRef, catCount = 8, captureStateRef }) {
   const characterRef = useRef();
   const cameraStateRef = useRef({ yaw: 0, pitch: 0.18, distance: 6.8, height: 3.2, smoothing: 0.14 });
@@ -19,10 +21,14 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
   useFrame((state, delta) => {
     const joy = touchState.current.joy;
     const look = touchState.current.look;
-    cameraStateRef.current.yaw -= look.dx * 0.0075;
-    cameraStateRef.current.pitch = THREE.MathUtils.clamp(cameraStateRef.current.pitch - look.dy * 0.0055, -0.35, 0.75);
+    if (look.dx !== 0 || look.dy !== 0) {
+      cameraStateRef.current.yaw -= look.dx * 0.0075;
+      cameraStateRef.current.pitch = THREE.MathUtils.clamp(cameraStateRef.current.pitch - look.dy * 0.0055, -0.35, 0.65);
+      if (DEBUG_CAMERA) console.log('[camera] consume look', { dx: look.dx, dy: look.dy, yaw: cameraStateRef.current.yaw, pitch: cameraStateRef.current.pitch, active: look.active });
+      look.dx = 0;
+      look.dy = 0;
+    }
     onCameraStateChange?.({ yaw: cameraStateRef.current.yaw, pitch: cameraStateRef.current.pitch });
-    look.dx = 0; look.dy = 0;
     if (!characterRef.current) return;
     const strafeInput = THREE.MathUtils.clamp(joy.x, -1, 1);
     const forwardInput = THREE.MathUtils.clamp(-joy.y, -1, 1);
