@@ -7,6 +7,8 @@ import LevelIntroCard from './game/components/LevelIntroCard';
 import WorldMapPanel from './game/components/WorldMapPanel';
 import SplashScreen from './game/components/SplashScreen';
 import LevelTransition from './game/components/LevelTransition';
+import CatCollection from './game/components/CatCollection';
+import { startBiomeAudio, muteBiomeAudio, unmuteBiomeAudio, playCaptureChime } from './game/audio/BiomeAudio.js';
 
 const DEBUG_INPUT = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugInput') === '1';
 
@@ -16,6 +18,7 @@ export default function CatHunt3D() {
   const [mute, setMute] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [isWorldPanelOpen, setIsWorldPanelOpen] = useState(false);
+  const [isCollectionOpen, setIsCollectionOpen] = useState(false);
   const [isTransitionOpen, setIsTransitionOpen] = useState(false);
   const game3dRef = useRef(null);
   const touchState = useRef({
@@ -25,6 +28,17 @@ export default function CatHunt3D() {
   });
 
   const visibleCats = useMemo(() => runtime.cats.filter((c) => !runtime.capturedCatIds.includes(c.id)).length, [runtime.cats, runtime.capturedCatIds]);
+
+  // Audio ambiental: arranca/cambia con el bioma actual
+  useEffect(() => {
+    if (screen === 'game') {
+      startBiomeAudio(runtime.worldConfig.theme).catch(() => {});
+    }
+  }, [screen, runtime.worldConfig.theme]);
+
+  useEffect(() => {
+    if (mute) muteBiomeAudio(); else unmuteBiomeAudio();
+  }, [mute]);
 
   // Detecta nivel completado → abre transición
   useEffect(() => {
@@ -38,6 +52,7 @@ export default function CatHunt3D() {
     const result = game3dRef.current?.attemptCatch?.();
     if (result?.success) {
       runtime.captureCat(result.catId);
+      playCaptureChime().catch(() => {});
     } else {
       runtime.setLastCatchResult(result ?? { success: false, reason: 'no_cat' });
       setFeedback('Acércate un poquito más');
@@ -64,7 +79,7 @@ export default function CatHunt3D() {
           onStart={() => setScreen('game')}
           onContinue={() => setScreen('game')}
           onWorlds={() => setIsWorldPanelOpen(true)}
-          onCollection={() => showFeedback('Próximamente: Colección de michis')}
+          onCollection={() => setIsCollectionOpen(true)}
           onHowToPlay={() => showFeedback('Mueve el joystick · Toca Atrapar al acercarte a un michi')}
           onCredits={() => showFeedback('Creado por Bernard y Sarita 💜')}
           onAchievements={() => showFeedback('Próximamente: Logros')}
@@ -83,6 +98,12 @@ export default function CatHunt3D() {
           }}
           onClose={() => setIsWorldPanelOpen(false)}
           onLockedWorld={() => showFeedback('Completa el mundo anterior para desbloquearlo')}
+        />
+        <CatCollection
+          isOpen={isCollectionOpen}
+          worlds={runtime.worlds}
+          progress={runtime.progress}
+          onClose={() => setIsCollectionOpen(false)}
         />
       </>
     );

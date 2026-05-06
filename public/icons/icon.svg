@@ -1,16 +1,111 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <radialGradient id="bg" cx="30%" cy="20%" r="90%">
-      <stop offset="0" stop-color="#ffd8ea"/>
-      <stop offset="0.55" stop-color="#c8b6ff"/>
-      <stop offset="1" stop-color="#8bc8ff"/>
+    <radialGradient id="bg" cx="0.5" cy="0.4" r="0.7">
+      <stop offset="0%" stop-color="#fff5fa"/>
+      <stop offset="60%" stop-color="#ffe5f0"/>
+      <stop offset="100%" stop-color="#ffc8e3"/>
     </radialGradient>
+    <linearGradient id="catBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff5e8"/>
+      <stop offset="100%" stop-color="#ffd8b8"/>
+    </linearGradient>
+    <radialGradient id="cheek" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#ff8fb8" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#ff8fb8" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6"/>
+      <feOffset dx="0" dy="6" result="off"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
   </defs>
-  <rect width="512" height="512" rx="120" fill="url(#bg)"/>
-  <circle cx="256" cy="292" r="138" fill="#fff4fa"/>
-  <path d="M150 176l70-66 26 96zM362 176l-70-66-26 96z" fill="#fff4fa"/>
-  <circle cx="208" cy="278" r="14" fill="#2f2442"/><circle cx="304" cy="278" r="14" fill="#2f2442"/>
-  <path d="M256 300c17 0 27 13 27 24 0 15-12 27-27 27s-27-12-27-27c0-11 10-24 27-24z" fill="#ff6b9d"/>
-  <circle cx="216" cy="320" r="11" fill="#ffb7d3"/><circle cx="296" cy="320" r="11" fill="#ffb7d3"/>
-  <path d="M165 96c15-6 30 7 36 25M347 96c-15-6-30 7-36 25" stroke="#fff" stroke-width="10" stroke-linecap="round" fill="none" opacity=".8"/>
+
+  <!-- Background pastel circle -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- Sparkles -->
+  <g fill="#ffeb9c" opacity="0.85">
+    <circle cx="80" cy="100" r="6"/>
+    <circle cx="430" cy="120" r="8"/>
+    <circle cx="60" cy="380" r="5"/>
+    <circle cx="450" cy="400" r="7"/>
+    <circle cx="120" cy="60" r="4"/>
+  </g>
+
+  <!-- Star sparkle -->
+  <g fill="#ffd066" transform="translate(420 90)">
+    <path d="M0,-14 L4,-4 L14,0 L4,4 L0,14 L-4,4 L-14,0 L-4,-4 Z"/>
+  </g>
+
+  <!-- Sakura petals -->
+  <g fill="#ff9bc8" opacity="0.6">
+    <ellipse cx="90" cy="200" rx="8" ry="4" transform="rotate(20 90 200)"/>
+    <ellipse cx="430" cy="270" rx="8" ry="4" transform="rotate(-30 430 270)"/>
+  </g>
+
+  <!-- Cat body group -->
+  <g filter="url(#softShadow)">
+    <!-- Tail (curling around) -->
+    <path d="M 380 360 Q 430 340 420 290 Q 410 250 380 260" fill="url(#catBody)" stroke="#e8b890" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Body -->
+    <ellipse cx="256" cy="370" rx="115" ry="80" fill="url(#catBody)"/>
+
+    <!-- Front paws -->
+    <ellipse cx="210" cy="430" rx="32" ry="22" fill="url(#catBody)"/>
+    <ellipse cx="302" cy="430" rx="32" ry="22" fill="url(#catBody)"/>
+    <!-- Toe pads -->
+    <ellipse cx="210" cy="438" rx="14" ry="6" fill="#ff8fb8" opacity="0.7"/>
+    <ellipse cx="302" cy="438" rx="14" ry="6" fill="#ff8fb8" opacity="0.7"/>
+
+    <!-- Head -->
+    <circle cx="256" cy="232" r="125" fill="url(#catBody)"/>
+
+    <!-- Ears outer -->
+    <path d="M 165 175 L 145 90 L 220 145 Z" fill="url(#catBody)"/>
+    <path d="M 347 175 L 367 90 L 292 145 Z" fill="url(#catBody)"/>
+    <!-- Ears inner -->
+    <path d="M 175 168 L 168 115 L 210 152 Z" fill="#ffb6d9"/>
+    <path d="M 337 168 L 344 115 L 302 152 Z" fill="#ffb6d9"/>
+
+    <!-- Cheek blush -->
+    <ellipse cx="180" cy="270" rx="34" ry="20" fill="url(#cheek)"/>
+    <ellipse cx="332" cy="270" rx="34" ry="20" fill="url(#cheek)"/>
+
+    <!-- Eyes (big closed happy eyes with curve) -->
+    <path d="M 195 232 q 18 -22 36 0" fill="none" stroke="#1a1a2e" stroke-width="9" stroke-linecap="round"/>
+    <path d="M 281 232 q 18 -22 36 0" fill="none" stroke="#1a1a2e" stroke-width="9" stroke-linecap="round"/>
+
+    <!-- Eye sparkles -->
+    <circle cx="220" cy="219" r="4" fill="#ffffff"/>
+    <circle cx="306" cy="219" r="4" fill="#ffffff"/>
+
+    <!-- Nose -->
+    <path d="M 252 268 q 4 -6 8 0 q -4 8 -4 8 q 0 0 -4 -8 Z" fill="#ff6ba6"/>
+
+    <!-- Mouth :3 style -->
+    <path d="M 256 280 q -10 14 -22 14" fill="none" stroke="#965672" stroke-width="4" stroke-linecap="round"/>
+    <path d="M 256 280 q 10 14 22 14" fill="none" stroke="#965672" stroke-width="4" stroke-linecap="round"/>
+
+    <!-- Whiskers -->
+    <g stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" opacity="0.85">
+      <path d="M 145 270 q -25 -3 -45 -8"/>
+      <path d="M 150 285 q -28 0 -48 4"/>
+      <path d="M 367 270 q 25 -3 45 -8"/>
+      <path d="M 362 285 q 28 0 48 4"/>
+    </g>
+
+    <!-- Bow (cute pink bow on head) -->
+    <g transform="translate(256 110)">
+      <path d="M -20 0 Q -30 -15 -25 -22 Q -10 -18 -5 -5 Z" fill="#ff8fb8"/>
+      <path d="M 20 0 Q 30 -15 25 -22 Q 10 -18 5 -5 Z" fill="#ff8fb8"/>
+      <circle cx="0" cy="-3" r="6" fill="#ff6ba6"/>
+    </g>
+  </g>
+
+  <!-- Heart bubble -->
+  <g transform="translate(118 150)">
+    <path d="M 0 4 q 0 -10 -8 -10 q -10 0 -10 10 q 0 12 18 22 q 18 -10 18 -22 q 0 -10 -10 -10 q -8 0 -8 10 Z" fill="#ff8fb8" opacity="0.85"/>
+  </g>
 </svg>

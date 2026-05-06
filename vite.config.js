@@ -10,7 +10,7 @@ export default defineConfig({
       includeAssets: ['icons/icon.svg'],
       manifest: {
         name: 'Sarita y los michi perdidos',
-        short_name: 'Sarita Michis',
+        short_name: 'Sarita',
         description: 'Una aventura mágica para rescatar gatitos perdidos.',
         start_url: '/',
         scope: '/',
@@ -22,5 +22,19 @@ export default defineConfig({
         icons: [{ src: '/icons/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }]
       }
     })
-  ]
+  ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          three: ['three'],
+          fiber: ['@react-three/fiber', '@react-three/drei'],
+          postfx: ['@react-three/postprocessing', 'postprocessing'],
+          tone: ['tone']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 600
+  }
 });
