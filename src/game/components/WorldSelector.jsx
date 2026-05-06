@@ -1,0 +1,5 @@
+export default function WorldSelector({ worlds, currentWorldId, unlockedWorldIds, onSelectWorld }) {
+  return <div data-game-ui="true" style={{position:'fixed',left:8,right:8,bottom:'max(8px,env(safe-area-inset-bottom))',zIndex:65,padding:'8px',borderRadius:24,backdropFilter:'blur(14px)',background:'rgba(255,255,255,.56)',border:'1px solid rgba(255,255,255,.7)',boxShadow:'0 8px 28px rgba(28,40,80,.18)'}}>
+    <div style={{display:'flex',gap:8,overflowX:'auto',paddingBottom:2}}>{worlds.map((w)=><button key={w.id} data-game-ui="true" onClick={()=>onSelectWorld(w.id)} disabled={!unlockedWorldIds.includes(w.id)} style={{minWidth:88,padding:6,borderRadius:16,border:w.id===currentWorldId?'1px solid #ffe08a':'1px solid rgba(255,255,255,.7)',background:w.thumbnail,color:'#2d2353',opacity:unlockedWorldIds.includes(w.id)?1:.52,boxShadow:w.id===currentWorldId?'0 0 0 2px rgba(255,226,138,.45)':'none'}}><div style={{fontWeight:800}}>{w.order}</div><div style={{fontSize:11,lineHeight:1.1}}>{w.name}</div><div>{unlockedWorldIds.includes(w.id)?'✨':'🔒'}</div></button>)}</div>
+  </div>;
+}
