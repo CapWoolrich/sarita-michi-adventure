@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 
-const DEBUG_CONTROLS = false;
+const DEBUG_CAMERA = false;
 
 export default function useCameraLookControls({ touchState, lookZoneRef, blockedSelectors = [] }) {
   const activeLookPointerId = useRef(null);
@@ -21,6 +21,7 @@ export default function useCameraLookControls({ touchState, lookZoneRef, blocked
     if (isBlockedTarget(e.target)) return;
     e.preventDefault();
     e.stopPropagation();
+    lookZoneRef.current?.setPointerCapture?.(e.pointerId);
     activeLookPointerId.current = e.pointerId;
     const look = touchState.current.look;
     look.active = true;
@@ -38,7 +39,7 @@ export default function useCameraLookControls({ touchState, lookZoneRef, blocked
     look.dy += e.clientY - look.lastY;
     look.lastX = e.clientX;
     look.lastY = e.clientY;
-    if (DEBUG_CONTROLS) console.log('[look]', look.dx, look.dy);
+    if (DEBUG_CAMERA) console.log('[camera-look]', look.dx, look.dy, activeLookPointerId.current);
   };
 
   const onPointerUp = (e) => {
@@ -46,6 +47,7 @@ export default function useCameraLookControls({ touchState, lookZoneRef, blocked
     if (activeLookPointerId.current !== e.pointerId) return;
     e.preventDefault();
     e.stopPropagation();
+    lookZoneRef.current?.releasePointerCapture?.(e.pointerId);
     activeLookPointerId.current = null;
     look.active = false;
     look.pointerId = null;
