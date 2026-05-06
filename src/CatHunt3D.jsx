@@ -109,11 +109,27 @@ const safeRead = (k, f) => { try { const v = localStorage.getItem(k); return v =
 const getMovementVector = (yaw, fwd, right) => ({ x: fwd * -Math.sin(yaw) + right * Math.cos(yaw), z: fwd * -Math.cos(yaw) + right * -Math.sin(yaw) });
 const DEBUG_CAMERA = false;
 const DEBUG_INPUT = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugInput') === '1';
+const CAT_SPAWN_POINTS = [
+  [-20,0.4,-10],[-12,0.4,16],[-6,0.4,-22],[8,0.4,20],[15,0.4,-8],[22,0.4,12],[-24,0.4,4],[0,0.4,26],[26,0.4,-20],[-18,0.4,-26]
+];
+
+const createLevelRuntime = (levelIndex, scoreCarry = 0) => {
+  const levelConfig = LEVELS[levelIndex];
+  const totalCats = levelConfig.cats;
+  const cats = Array.from({ length: totalCats }, (_, i) => {
+    const profile = MICHI_PROFILES[(levelIndex * 3 + i) % MICHI_PROFILES.length];
+    const variant = CAT_VARIANTS[(levelIndex * 2 + i) % CAT_VARIANTS.length];
+    const pos = CAT_SPAWN_POINTS[(levelIndex * 4 + i) % CAT_SPAWN_POINTS.length];
+    return { id: `lvl${levelIndex}-cat${i}-${profile.id}`, profileId: profile.id, name: profile.name, trait: profile.personality, position: pos, captured: false, seed: i * 1.73, color: variant.color };
+  });
+  return { currentLevelIndex: levelIndex, levelConfig, totalCats, cats, capturedCatIds: [], score: scoreCarry, timer: levelConfig.timeLimit, isLevelComplete: false, runtime.nearestCatId: null, runtime.nearestCatDistance: Infinity, speedMode: 'normal', grounded: true, isJumping: false, verticalVelocity: 0, jumpOffset: 0, lastCatchResult: null };
+};
+
 
 export default function CatHunt3D() {
   const [screen, setScreen] = useState('menu');
-  const [levelIndex, setLevelIndex] = useState(0);
-  const [score, setScore] = useState(0);
+  const [runtime, setRuntime] = useState(() => createLevelRuntime(0, 0));
+  
   const [bestScore, setBestScore] = useState(() => safeRead('bestScore', 0));
   const [mute, setMute] = useState(() => safeRead('mute', false));
   const [rescuedMichis, setRescuedMichis] = useState(() => safeRead('rescuedMichis', []));
@@ -121,22 +137,22 @@ export default function CatHunt3D() {
   const [completedLevels, setCompletedLevels] = useState(() => safeRead('completedLevels', []));
   const [achievements, setAchievements] = useState(() => safeRead('achievements', []));
   const [achievementToast, setAchievementToast] = useState('');
-  const [timeLeft, setTimeLeft] = useState(LEVELS[0].timeLimit);
-  const [found, setFound] = useState(0);
+  
+  
   const [hint, setHint] = useState('Busca a los michi perdidos...');
   const [rescueToast, setRescueToast] = useState('');
   const [playerPosition3D, setPlayerPosition3D] = useState({ x: 0, y: 0, z: 0 });
-  const [nearestCatId, setNearestCatId] = useState(null);
-  const [nearestCatDistance, setNearestCatDistance] = useState(Infinity);
+  
+  
   const [isCatInCaptureRange, setIsCatInCaptureRange] = useState(false);
-  const [capturedCatIds3D, setCapturedCatIds3D] = useState([]);
-  const [levelStartNonce, setLevelStartNonce] = useState(0);
-  const [speedMode, setSpeedMode] = useState('normal');
+  
+  
+  
   const [jumpNonce, setJumpNonce] = useState(0);
   const [starCount, setStarCount] = useState(0);
-  const [lastCatchResult, setLastCatchResult] = useState(null);
+  
   const [lastCapturedCatId, setLastCapturedCatId] = useState(null);
-  const [levelCompleteQueued, setLevelCompleteQueued] = useState(false);
+  
   const rescueToastTimeoutRef = useRef(null);
   const [paused, setPaused] = useState(false);
   const [lastFoundProfiles, setLastFoundProfiles] = useState([]);
@@ -145,6 +161,12 @@ export default function CatHunt3D() {
   const touchState = useRef({ joystick: { active: false, x: 0, y: 0, magnitude: 0 }, joy: { active: false, x: 0, y: 0, magnitude: 0 }, look: { active: false, dx: 0, dy: 0 }, debug: { lookMoveCount: 0, yawChangeCount: 0 } });
   const audioRef = useRef({ started: false, sounds: {} });
   const isMobile = useMemo(() => /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent), []);
+  const levelIndex = runtime.currentLevelIndex;
+  const score = runtime.score;
+  const timeLeft = runtime.timer;
+  const found = runtime.capturedCatIds.length;
+  const speedMode = runtime.speedMode;
+
 
   useEffect(() => localStorage.setItem('bestScore', JSON.stringify(bestScore)), [bestScore]);
   useEffect(() => { localStorage.setItem('mute', JSON.stringify(mute)); Tone.Destination.mute = mute; }, [mute]);
@@ -267,7 +289,7 @@ export default function CatHunt3D() {
       if (min < 7 && Math.random() < 0.014) playSfx('meowAppear');
     } renderer.render(scene, camera); gameRef.current.rafId = requestAnimationFrame(animate); };
     animate();
-    timerRef.current = setInterval(() => setTimeLeft((t) => (!paused && screen === 'playing' ? Math.max(0, t - 1) : t)), 1000);
+    timerRef.current = setInterval(() => setRuntime((rt) => (!paused && screen === 'playing' && !rt.isLevelComplete ? { ...rt, timer: Math.max(0, rt.timer - 1) } : rt)), 1000);
   }, [isMobile, paused, rescuedMichis.length, screen, settings, stopGame, playSfx]);
 
   useEffect(() => {
@@ -290,10 +312,10 @@ export default function CatHunt3D() {
 
   useEffect(() => { if (timeLeft === 0 && screen === 'playing') { pendingLevelRef.current = null; setScreen('gameover'); stopGame(); } }, [timeLeft, screen, stopGame]);
   useEffect(() => {
-    if (screen !== 'playing' || levelCompleteQueued) return;
-    const totalCats = LEVELS[levelIndex].cats;
+    if (screen !== 'playing' || runtime.isLevelComplete) return;
+    const totalCats = runtime.totalCats;
     if (totalCats <= 0) return;
-    if (capturedCatIds3D.length < totalCats) return;
+    if (runtime.capturedCatIds.length < totalCats) return;
     setLevelCompleteQueued(true);
     if (timeLeft > 30) unlockAchievement('fast', 'Rescatista veloz');
     const total = score + timeLeft * 10;
@@ -307,15 +329,22 @@ export default function CatHunt3D() {
     playSfx('levelComplete');
     setScreen(levelIndex === LEVELS.length - 1 ? 'complete' : 'levelComplete');
     if (levelIndex === LEVELS.length - 1) unlockAchievement('legend', 'Leyenda estrellada');
-  }, [capturedCatIds3D.length, levelCompleteQueued, levelIndex, playSfx, score, screen, stopGame, timeLeft]);
+  }, [runtime.capturedCatIds.length, runtime.isLevelComplete, levelIndex, playSfx, score, screen, stopGame, timeLeft]);
 
 
-  const handle3DCatCaptured = useCallback((catId) => {
+  const handleCatCaptured = useCallback((catId) => {
     if (catId == null) return false;
     const numericId = Number(catId);
     const profile = MICHI_PROFILES[(levelIndex * 2 + numericId) % MICHI_PROFILES.length];
     let capturedNow = false;
-    setCapturedCatIds3D((prev) => {
+    setRuntime((rt) => {
+      if (rt.capturedCatIds.includes(catId)) return rt;
+      const capturedCatIds = [...rt.capturedCatIds, catId];
+      const isLevelComplete = capturedCatIds.length === rt.totalCats;
+      return { ...rt, capturedCatIds, score: rt.score + 120, isLevelComplete };
+    });
+    if (runtime.capturedCatIds.includes(catId)) return false;
+    
       if (prev.includes(catId)) return prev;
       capturedNow = true;
       return [...prev, catId];
@@ -344,8 +373,8 @@ export default function CatHunt3D() {
       setHint('Acércate un poquito más');
       return;
     }
-    handle3DCatCaptured(result.catId);
-  }, [handle3DCatCaptured, playSfx]);
+    handleCatCaptured(result.catId);
+  }, [handleCatCaptured, playSfx]);
   const handleStarCollected = useCallback(() => {
     setStarCount((s) => s + 1);
     setScore((sc) => sc + 15);
@@ -388,7 +417,7 @@ export default function CatHunt3D() {
 
     {screen === 'playing' && <div className="gameplay-screen">
       <div ref={mountRef} style={{ position: 'fixed', inset: 0, opacity: 0, pointerEvents: 'none' }} />
-      <Game3DCanvas key={`${levelIndex}-${levelStartNonce}`} ref={game3dRef} touchState={touchState} catCount={LEVELS[levelIndex].cats} captureRadius={2.2} isPaused={paused} isLevelComplete={screen === 'levelComplete'} capturedCatIds={capturedCatIds3D} speedMode={speedMode} jumpNonce={jumpNonce} levelIndex={levelIndex} onStarCollected={handleStarCollected} onPlayerPositionChange={setPlayerPosition3D} onNearestCatChange={(id, distance, inRange) => { setNearestCatId(id); setNearestCatDistance(distance); setIsCatInCaptureRange(inRange); if (distance < 6.5) setHint('🐾 Sigue el brillo... hay un michi cerca'); }} />
+      <Game3DCanvas key={`${levelIndex}-${levelStartNonce}`} ref={game3dRef} touchState={touchState} runtime={runtime} captureRadius={2.2} isPaused={paused} isLevelComplete={screen === 'levelComplete'}     onStarCollected={handleStarCollected} onPlayerPositionChange={setPlayerPosition3D} onNearestCatChange={(id, distance, inRange) => { setRuntime((rt) => ({ ...rt, runtime.nearestCatId: id, runtime.nearestCatDistance: distance })); setIsCatInCaptureRange(inRange); if (distance < 6.5) setHint('🐾 Sigue el brillo... hay un michi cerca'); }} />
       <div className="level-world-backdrop" aria-hidden="true"><div className="floating-clouds"/><div className="sparkle-particles"/></div>
       <header className="integrated-hud" data-game-ui="true">
         <div className="hud-world">
@@ -396,7 +425,7 @@ export default function CatHunt3D() {
           <strong>{LEVELS[levelIndex].name}</strong>
         </div>
         <div className="hud-stats" aria-label="estadísticas del nivel">
-          <div className="hud-stat-chip"><span>🐱</span><b>{found}/{LEVELS[levelIndex].cats}</b></div>
+          <div className="hud-stat-chip"><span>🐱</span><b>{found}/{runtime.totalCats}</b></div>
           <div className="hud-stat-chip"><span>⏱️</span><b>{timeLeft}s</b></div>
           <div className="hud-stat-chip hud-score"><span>⭐</span><b>{score}</b></div>
           <div className="hud-stat-chip"><span>✨</span><b>{starCount}</b></div>
@@ -407,9 +436,9 @@ export default function CatHunt3D() {
           <button data-game-ui="true" className="hud-icon-btn" aria-label="Volver al menú" onClick={() => { setScreen('menu'); stopGame(); }}>🏠</button>
         </div>
       </header>
-      {isMobile && <MobileGameInputLayer touchState={touchState} isCatInCaptureRange={isCatInCaptureRange} onCatch={handleCatchAction} onJump={handleJumpAction} speedMode={speedMode} onToggleSpeed={() => setSpeedMode((m) => (m === 'fast' ? 'normal' : 'fast'))}  />}
+      {isMobile && <MobileGameInputLayer touchState={touchState} isCatInCaptureRange={isCatInCaptureRange} onCatch={handleCatchAction} onJump={handleJumpAction}  onToggleSpeed={() => setRuntime((rt)=>({ ...rt, speedMode: rt.speedMode === 'fast' ? 'normal' : 'fast' }))}  />}
       {!isMobile && <div data-game-ui="true" style={{ position: 'fixed', right: 14, bottom: 14, zIndex: 25, display:'flex', gap:8 }}>
-        <button data-game-ui="true" className="catch-btn" onClick={() => setSpeedMode((m) => (m === 'fast' ? 'normal' : 'fast'))}>⚡ {speedMode === 'fast' ? 'Rápido' : 'Normal'}</button>
+        <button data-game-ui="true" className="catch-btn" onClick={() => setRuntime((rt)=>({ ...rt, speedMode: rt.speedMode === 'fast' ? 'normal' : 'fast' }))}>⚡ {speedMode === 'fast' ? 'Rápido' : 'Normal'}</button>
         <button data-game-ui="true" className="catch-btn" onClick={handleJumpAction}>⬆️ Saltar</button>
         <button data-game-ui="true" className={`catch-btn ${isCatInCaptureRange ? 'catch-btn-ready' : ''}`} onClick={handleCatchAction}>🐾 Atrapar gatito</button>
       </div>}
@@ -422,16 +451,16 @@ export default function CatHunt3D() {
     {screen === 'complete' && <Panel title='Misión completa ✨'><SaritaMascot /><p>Puntuación final: {score}</p><button onClick={() => startLevel(0, true)}>Jugar de nuevo</button></Panel>}
     {screen === 'gameover' && <Panel title='Game Over'><button onClick={() => startLevel(levelIndex)}>Reintentar</button><button onClick={() => setScreen('menu')}>Menú</button></Panel>}
     {DEBUG_INPUT && screen === 'playing' && <div data-game-ui="true" style={{ position:'fixed', left:8, top:160, zIndex:95, background:'rgba(0,0,0,.75)', color:'#fff', padding:8, borderRadius:8, fontSize:11, fontFamily:'monospace' }}>
-      <div>capturedCatIds: {JSON.stringify(capturedCatIds3D)}</div>
-      <div>capturedCatIds.length: {capturedCatIds3D.length}</div>
-      <div>totalCats: {LEVELS[levelIndex].cats}</div>
-      <div>nearestCatId: {String(nearestCatId)}</div>
-      <div>nearestCatDistance: {Number.isFinite(nearestCatDistance) ? nearestCatDistance.toFixed(2) : '∞'}</div>
-      <div>visibleCats: {LEVELS[levelIndex].cats - capturedCatIds3D.length}</div>
+      <div>capturedCatIds: {JSON.stringify(runtime.capturedCatIds)}</div>
+      <div>capturedCatIds.length: {runtime.capturedCatIds.length}</div>
+      <div>totalCats: {runtime.totalCats}</div>
+      <div>runtime.nearestCatId: {String(runtime.nearestCatId)}</div>
+      <div>runtime.nearestCatDistance: {Number.isFinite(runtime.nearestCatDistance) ? runtime.nearestCatDistance.toFixed(2) : '∞'}</div>
+      <div>visibleCats: {runtime.totalCats - runtime.capturedCatIds.length}</div>
       <div>isCatInCaptureRange: {String(isCatInCaptureRange)}</div>
       <div>lastCatchResult: {lastCatchResult ? JSON.stringify(lastCatchResult) : 'null'}</div>
       <div>lastCapturedCatId: {String(lastCapturedCatId)}</div>
-      <div>levelCompleteQueued: {String(levelCompleteQueued)}</div>
+      <div>runtime.isLevelComplete: {String(runtime.isLevelComplete)}</div>
       <div>currentLevelIndex: {levelIndex}</div>
       <div>speedMode: {speedMode}</div>
     </div>}
