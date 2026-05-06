@@ -3,18 +3,13 @@ import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'reac
 import * as THREE from 'three';
 import WorldScene from './WorldScene';
 import CharacterSarita3D from './CharacterSarita3D';
-import ThirdPersonCamera from './ThirdPersonCamera';
 import CatEntity3D from './CatEntity3D';
+import useRobloxLikeControls from './useRobloxLikeControls';
 
-const DEBUG_CAMERA = false;
-const LOOK_SENSITIVITY_X = 0.0085;
-const LOOK_SENSITIVITY_Y = 0.006;
-const CAMERA_MIN_PITCH = -0.4;
-const CAMERA_MAX_PITCH = 0.7;
+const DEBUG_INPUT = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugInput') === '1';
 
-function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, onCameraStateChange, captureRadius = 2, nearestCatIdRef, nearestInRangeRef, catCount = 8, captureStateRef }) {
+function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, captureRadius = 2, nearestCatIdRef, nearestInRangeRef, catCount = 8, captureStateRef, isPaused, isLevelComplete, onDebugUpdate, controlsApiRef }) {
   const characterRef = useRef();
-  const cameraStateRef = useRef({ yaw: 0, pitch: 0.18, distance: 6.8, height: 3.2, smoothing: 0.14 });
   const [animState, setAnimState] = useState('idle');
   const cats = useMemo(() => Array.from({ length: catCount }, (_, i) => {
     const angle = (i / catCount) * Math.PI * 2 + Math.random() * 0.25;
@@ -22,59 +17,19 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
     return { id: i, x: Math.cos(angle) * radius, z: Math.sin(angle) * radius, phase: Math.random() * 10, color: ['#ffe7b8', '#dcc8ff', '#c5f1e6', '#ffd6ba'][i % 4] };
   }), [catCount]);
 
-  const worldUp = new THREE.Vector3(0, 1, 0);
-  const forward = new THREE.Vector3();
-  const right = new THREE.Vector3();
-  const moveDirection = new THREE.Vector3();
+  controlsApiRef.current = useRobloxLikeControls({ characterRef, touchState, isPaused, isLevelComplete, onDebugUpdate });
 
-  useFrame((state, delta) => {
-    const joy = touchState.current.joy;
-    const look = touchState.current.look;
-    if (look.dx !== 0 || look.dy !== 0) {
-      cameraStateRef.current.yaw -= look.dx * LOOK_SENSITIVITY_X;
-      cameraStateRef.current.pitch = THREE.MathUtils.clamp(cameraStateRef.current.pitch - look.dy * LOOK_SENSITIVITY_Y, CAMERA_MIN_PITCH, CAMERA_MAX_PITCH);
-      touchState.current.debug.yawChangeCount += 1;
-      if (DEBUG_CAMERA) console.log('[camera] consume look', { dx: look.dx, dy: look.dy, yaw: cameraStateRef.current.yaw, pitch: cameraStateRef.current.pitch, active: look.active });
-      look.dx = 0;
-      look.dy = 0;
-    }
-    onCameraStateChange?.({ yaw: cameraStateRef.current.yaw, pitch: cameraStateRef.current.pitch });
+  useFrame(() => {
     if (!characterRef.current) return;
-    const strafeInput = THREE.MathUtils.clamp(joy.x, -1, 1);
-    const forwardInput = THREE.MathUtils.clamp(-joy.y, -1, 1);
-    const magnitude = Math.hypot(strafeInput, forwardInput);
-    const deadzone = 0.1;
-    const speed = magnitude < deadzone ? 0 : magnitude;
-    state.camera.getWorldDirection(forward);
-    forward.y = 0;
-    if (forward.lengthSq() > 0.0001) forward.normalize();
-    right.crossVectors(forward, worldUp).normalize();
-
-    moveDirection.set(0, 0, 0)
-      .addScaledVector(forward, speed ? forwardInput / Math.max(1, magnitude) : 0)
-      .addScaledVector(right, speed ? strafeInput / Math.max(1, magnitude) : 0);
-
-    if (moveDirection.lengthSq() > 0.0001) {
-      const dir = moveDirection.normalize();
-      characterRef.current.position.addScaledVector(dir, Math.min(5.1 * delta, 0.14));
-      characterRef.current.position.x = THREE.MathUtils.clamp(characterRef.current.position.x, -36, 36);
-      characterRef.current.position.z = THREE.MathUtils.clamp(characterRef.current.position.z, -36, 36);
-      characterRef.current.rotation.y = THREE.MathUtils.lerp(characterRef.current.rotation.y, Math.atan2(dir.x, dir.z), 0.16);
-      setAnimState('run');
-    } else {
-      setAnimState('idle');
-    }
-
+    const joy = touchState.current.joy || touchState.current.joystick;
+    setAnimState((joy?.magnitude ?? 0) > 0.1 ? 'run' : 'idle');
     const p = characterRef.current.position;
     onPlayerPositionChange?.({ x: p.x, y: p.y, z: p.z });
     let nearest = null;
     let nearestDist = Infinity;
     for (const cat of cats) {
       const d = Math.hypot(cat.x - p.x, 0.68 - p.y, cat.z - p.z);
-      if (d < nearestDist) {
-        nearestDist = d;
-        nearest = cat;
-      }
+      if (d < nearestDist) { nearestDist = d; nearest = cat; }
     }
     const inRange = nearestDist <= captureRadius;
     captureStateRef.current.player = { x: p.x, y: p.y, z: p.z };
@@ -90,14 +45,15 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
     <WorldScene />
     {cats.map((cat)=><CatEntity3D key={cat.id} cat={cat} visible={!captureStateRef.current.capturedIds.has(cat.id)} highlight={nearestCatIdRef.current === cat.id && nearestInRangeRef.current} />)}
     <CharacterSarita3D characterRef={characterRef} animState={animState} />
-    <ThirdPersonCamera targetRef={characterRef} cameraStateRef={cameraStateRef} />
   </>;
 }
 
-const Game3DCanvas = forwardRef(function Game3DCanvas({ touchState, onPlayerPositionChange, onNearestCatChange, onCameraStateChange, captureRadius, catCount = 8 }, ref) {
+const Game3DCanvas = forwardRef(function Game3DCanvas({ touchState, onPlayerPositionChange, onNearestCatChange, captureRadius, catCount = 8, isPaused = false, isLevelComplete = false }, ref) {
   const nearestCatIdRef = useRef(null);
   const nearestInRangeRef = useRef(false);
+  const controlsApiRef = useRef(null);
   const captureStateRef = useRef({ player: { x: 0, y: 0, z: 0 }, nearestCatId: null, nearestDistance: Infinity, inRange: false, capturedIds: new Set() });
+  const [debugState, setDebugState] = useState(null);
   const handleNearestCatChange = (id, distance, isInRange) => {
     nearestCatIdRef.current = id;
     nearestInRangeRef.current = isInRange;
@@ -115,10 +71,23 @@ const Game3DCanvas = forwardRef(function Game3DCanvas({ touchState, onPlayerPosi
       return { success: true, catId: nearestId, distance: captureStateRef.current.nearestDistance };
     }
   }), []);
-  return <div style={{ position:'fixed', inset:0, zIndex:2, touchAction:'none', userSelect:'none', overscrollBehavior:'none' }}>
+
+  return <div className="gameplay-screen" style={{ position:'fixed', inset:0, zIndex:2 }}>
     <Canvas shadows dpr={[1,1.5]}>
-      <SceneRuntime touchState={touchState} onPlayerPositionChange={onPlayerPositionChange} onNearestCatChange={handleNearestCatChange} onCameraStateChange={onCameraStateChange} captureRadius={captureRadius} nearestCatIdRef={nearestCatIdRef} nearestInRangeRef={nearestInRangeRef} catCount={catCount} captureStateRef={captureStateRef} />
+      <SceneRuntime touchState={touchState} onPlayerPositionChange={onPlayerPositionChange} onNearestCatChange={handleNearestCatChange} captureRadius={captureRadius} nearestCatIdRef={nearestCatIdRef} nearestInRangeRef={nearestInRangeRef} catCount={catCount} captureStateRef={captureStateRef} isPaused={isPaused} isLevelComplete={isLevelComplete} onDebugUpdate={DEBUG_INPUT ? setDebugState : undefined} controlsApiRef={controlsApiRef} />
     </Canvas>
+    {DEBUG_INPUT && debugState && <div data-game-ui="true" style={{ position:'fixed', right:8, top:96, zIndex:95, background:'rgba(0,0,0,.75)', color:'#fff', padding:8, borderRadius:8, fontSize:11, fontFamily:'monospace' }}>
+      <div>joy.x: {(debugState.joy?.x ?? 0).toFixed(2)}</div><div>joy.y: {(debugState.joy?.y ?? 0).toFixed(2)}</div><div>joy.magnitude: {(debugState.joy?.magnitude ?? 0).toFixed(2)}</div>
+      <div>cameraYaw: {debugState.cameraYaw.toFixed(3)}</div><div>cameraPitch: {debugState.cameraPitch.toFixed(3)}</div>
+      <div>lookTouchId: {String(debugState.lookTouchId)}</div><div>lastLookX: {debugState.lastLookX.toFixed(1)}</div><div>lastLookY: {debugState.lastLookY.toFixed(1)}</div>
+      <div>lookMoveCount: {debugState.lookMoveCount}</div><div>cameraApplyCount: {debugState.cameraApplyCount}</div>
+      <div>playerPosition: {debugState.playerPosition.x.toFixed(2)}, {debugState.playerPosition.y.toFixed(2)}, {debugState.playerPosition.z.toFixed(2)}</div>
+      <div>playerRotation: {debugState.playerRotation.toFixed(3)}</div>
+      <div style={{ display:'flex', gap:6, marginTop:6 }}>
+        <button data-game-ui="true" onClick={() => controlsApiRef.current?.adjustYaw?.(-0.25)}>Yaw -</button>
+        <button data-game-ui="true" onClick={() => controlsApiRef.current?.adjustYaw?.(0.25)}>Yaw +</button>
+      </div>
+    </div>}
   </div>;
 });
 

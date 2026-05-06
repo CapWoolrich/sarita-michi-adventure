@@ -136,7 +136,6 @@ export default function CatHunt3D() {
   const [settings, setSettings] = useState(() => safeRead('settings', { look: 'media', quality: 'normal' }));
   const mountRef = useRef(null); const gameRef = useRef(null); const game3dRef = useRef(null); const timerRef = useRef(null); const pendingLevelRef = useRef(null);
   const touchState = useRef({ joystick: { active: false, x: 0, y: 0, magnitude: 0 }, joy: { active: false, x: 0, y: 0, magnitude: 0 }, look: { active: false, dx: 0, dy: 0 }, debug: { lookMoveCount: 0, yawChangeCount: 0 } });
-  const [cameraDebug, setCameraDebug] = useState({ yaw: 0, pitch: 0 });
   const audioRef = useRef({ started: false, sounds: {} });
   const isMobile = useMemo(() => /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent), []);
 
@@ -340,7 +339,7 @@ export default function CatHunt3D() {
 
     {screen === 'playing' && <div className="gameplay-screen">
       <div ref={mountRef} style={{ position: 'fixed', inset: 0, opacity: 0, pointerEvents: 'none' }} />
-      <Game3DCanvas key={`${levelIndex}-${levelStartNonce}`} ref={game3dRef} touchState={touchState} catCount={LEVELS[levelIndex].cats} captureRadius={2} onPlayerPositionChange={setPlayerPosition3D} onCameraStateChange={setCameraDebug} onNearestCatChange={(id, distance, inRange) => { setNearestCatId(id); setNearestCatDistance(distance); setIsCatInCaptureRange(inRange); }} />
+      <Game3DCanvas key={`${levelIndex}-${levelStartNonce}`} ref={game3dRef} touchState={touchState} catCount={LEVELS[levelIndex].cats} captureRadius={2} isPaused={paused} isLevelComplete={screen === 'levelComplete'} onPlayerPositionChange={setPlayerPosition3D} onNearestCatChange={(id, distance, inRange) => { setNearestCatId(id); setNearestCatDistance(distance); setIsCatInCaptureRange(inRange); }} />
       <div className="level-world-backdrop" aria-hidden="true"><div className="floating-clouds"/><div className="sparkle-particles"/></div>
       <header className="integrated-hud" data-game-ui="true">
         <div className="hud-world">
@@ -358,12 +357,11 @@ export default function CatHunt3D() {
           <button data-game-ui="true" className="hud-icon-btn" aria-label="Volver al menú" onClick={() => { setScreen('menu'); stopGame(); }}>🏠</button>
         </div>
       </header>
-      {isMobile && <MobileGameInputLayer touchState={touchState} isCatInCaptureRange={isCatInCaptureRange} onCatch={handleCatchAction} cameraDebug={cameraDebug} />}
+      {isMobile && <MobileGameInputLayer touchState={touchState} isCatInCaptureRange={isCatInCaptureRange} onCatch={handleCatchAction}  />}
       {!isMobile && <button className={`catch-btn ${isCatInCaptureRange ? 'catch-btn-ready' : ''}`} onClick={handleCatchAction} style={{ position: 'fixed', right: 14, bottom: 14, zIndex: 25 }}>🐾 Atrapar gatito</button>}
       <div style={{ position: 'fixed', bottom: 16, left: 0, right: 0, textAlign: 'center', color: '#fff', fontWeight: 700, textShadow: '0 2px 6px #000' }}>{hint}</div>
       {rescueToast && <div style={{ position: 'fixed', top: '18%', left: '50%', transform: 'translateX(-50%)', zIndex: 22, background: 'rgba(255,105,173,.88)', color: '#fff', padding: '8px 12px', borderRadius: 999, pointerEvents: 'none', animation: 'fadeToast 1.4s ease forwards' }}>{rescueToast}</div>}
       {paused && <Panel title='Juego en pausa'><button onClick={() => setPaused(false)}>Continuar</button><button onClick={() => startLevel(levelIndex)}>Reiniciar nivel</button><button onClick={() => { setScreen('menu'); stopGame(); }}>Menú</button></Panel>}
-      {DEBUG_CAMERA && <div style={{ position: 'fixed', right: 10, top: 'max(88px, calc(env(safe-area-inset-top) + 60px))', zIndex: 80, background: 'rgba(0,0,0,.65)', color: '#fff', padding: '8px 10px', borderRadius: 8, fontFamily: 'monospace', fontSize: 12 }}><div>look.dx: {touchState.current.look.dx.toFixed(2)}</div><div>look.dy: {touchState.current.look.dy.toFixed(2)}</div><div>activePointerId: {String(touchState.current.look.pointerId)}</div><div>cameraYaw: {cameraDebug.yaw.toFixed(3)}</div><div>cameraPitch: {cameraDebug.pitch.toFixed(3)}</div></div>}
     </div>}
 
     {screen === 'levelComplete' && <div className="level-complete-shell"><div className="level-complete-card"><div className="lc-scroll"><div><h2>¡Nivel completado!</h2><p>{LEVEL_STORY[Math.min(levelIndex + 1, LEVEL_STORY.length - 1)]}</p><p className="lc-world">🌎 {LEVELS[Math.min(levelIndex + 1, LEVELS.length - 1)].name}</p></div><div><h3>Gatitos encontrados</h3>{lastFoundProfiles.map((p) => <div key={p.id} className="lc-cat">🐱 {p.name} — {p.personality}</div>)}</div></div><div className="lc-footer"><button className="next-btn" onClick={() => { playSfx('nextLevel'); startLevel(levelIndex + 1); }}>Siguiente nivel</button></div></div></div>}
