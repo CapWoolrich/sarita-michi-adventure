@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Game3DCanvas from './game3d/Game3DCanvas';
 import MobileGameInputLayer from './game3d/MobileGameInputLayer';
 import useGameRuntime from './game/useGameRuntime';
@@ -117,7 +117,25 @@ export default function CatHunt3D() {
     if (isLoadingScreen) {
       runtime.setIsPaused?.(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoadingScreen]);
+
+  // FAILSAFE: si el loading lleva 5s, forzar cierre (no debería llegar aquí, pero por si acaso)
+  useEffect(() => {
+    if (!isLoadingScreen) return;
+    const t = setTimeout(() => {
+      setIsLoadingScreen(false);
+      runtime.setIsPaused?.(false);
+    }, 5000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoadingScreen]);
+
+  const onLoadingComplete = useCallback(() => {
+    setIsLoadingScreen(false);
+    runtime.setIsPaused?.(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Sincronizar invulnerable ref con health
   useEffect(() => {
@@ -390,7 +408,7 @@ export default function CatHunt3D() {
       <LoadingScreen
         isOpen={isLoadingScreen}
         worldName={runtime.worldConfig.name}
-        onComplete={() => { setIsLoadingScreen(false); runtime.setIsPaused?.(false); }}
+        onComplete={onLoadingComplete}
       />
 
       <DifficultySelector
