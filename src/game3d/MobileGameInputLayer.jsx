@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 
-const DEBUG_MOBILE_INPUT = false;
+const DEBUG_MOBILE_INPUT =
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).get('debugInput') === '1';
 const JOYSTICK_RADIUS = 56;
 const MOVE_DEADZONE = 0.1;
 
@@ -8,7 +10,7 @@ export default function MobileGameInputLayer({ touchState, onCatch, isCatInCaptu
   const layerRef = useRef(null);
   const moveTouchIdRef = useRef(null);
   const lookTouchIdRef = useRef(null);
-  const moveOriginRef = useRef({ x: 0, y: 0 });
+  const joystickOriginRef = useRef({ x: 0, y: 0 });
   const lastLookRef = useRef({ x: 0, y: 0 });
   const [joystickVisual, setJoystickVisual] = useState({ active: false, x: 0, y: 0, centerX: 0, centerY: 0 });
 
@@ -42,7 +44,7 @@ export default function MobileGameInputLayer({ touchState, onCatch, isCatInCaptu
 
       if (leftMoveZone && moveTouchIdRef.current == null) {
         moveTouchIdRef.current = touch.identifier;
-        moveOriginRef.current = { x: touch.clientX, y: touch.clientY };
+        joystickOriginRef.current = { x: touch.clientX, y: touch.clientY };
         touchState.current.joystick.active = true;
         touchState.current.joy = touchState.current.joystick;
         setJoystickVisual({ active: true, x: 0, y: 0, centerX: touch.clientX, centerY: touch.clientY });
@@ -52,10 +54,11 @@ export default function MobileGameInputLayer({ touchState, onCatch, isCatInCaptu
       if (rightLookZone && lookTouchIdRef.current == null) {
         lookTouchIdRef.current = touch.identifier;
         lastLookRef.current = { x: touch.clientX, y: touch.clientY };
-        touchState.current.look.active = true;
-        return;
-      }
-    };
+          touchState.current.look.active = true;
+          if (DEBUG_MOBILE_INPUT) console.log('[mobile-input] look start', { lookTouchId: touch.identifier, x: touch.clientX, y: touch.clientY });
+          return;
+        }
+      };
 
     const onTouchStart = (event) => {
       for (const touch of Array.from(event.changedTouches)) handleStartForTouch(touch, event);
@@ -66,8 +69,8 @@ export default function MobileGameInputLayer({ touchState, onCatch, isCatInCaptu
       let consumed = false;
       for (const touch of Array.from(event.changedTouches)) {
         if (touch.identifier === moveTouchIdRef.current) {
-          const dx = touch.clientX - moveOriginRef.current.x;
-          const dy = touch.clientY - moveOriginRef.current.y;
+          const dx = touch.clientX - joystickOriginRef.current.x;
+          const dy = touch.clientY - joystickOriginRef.current.y;
           const magPx = Math.hypot(dx, dy);
           const clampedMag = Math.min(1, magPx / JOYSTICK_RADIUS);
           const nx = magPx > 0 ? dx / magPx : 0;
@@ -91,10 +94,14 @@ export default function MobileGameInputLayer({ touchState, onCatch, isCatInCaptu
 
         if (touch.identifier === lookTouchIdRef.current) {
           const look = touchState.current.look;
+          const dx = touch.clientX - lastLookRef.current.x;
+          const dy = touch.clientY - lastLookRef.current.y;
           look.active = true;
-          look.dx += touch.clientX - lastLookRef.current.x;
-          look.dy += touch.clientY - lastLookRef.current.y;
+          look.dx += dx;
+          look.dy += dy;
+          touchState.current.debug.lookMoveCount += 1;
           lastLookRef.current = { x: touch.clientX, y: touch.clientY };
+          if (DEBUG_MOBILE_INPUT) console.log('[mobile-input] look move', { dx, dy, lookDx: look.dx, lookDy: look.dy });
           consumed = true;
         }
       }
@@ -132,8 +139,8 @@ export default function MobileGameInputLayer({ touchState, onCatch, isCatInCaptu
   }, [touchState]);
 
   return <div ref={layerRef} className="mobile-game-input-layer" style={{ position: 'fixed', inset: 0, zIndex: 52, touchAction: 'none' }}>
-    <div className="mobile-move-zone" style={{ position: 'fixed', left: 0, bottom: 0, width: '45vw', height: '65vh' }} />
-    <div className="mobile-look-zone" style={{ position: 'fixed', right: 0, top: 'max(84px, calc(env(safe-area-inset-top) + 56px))', bottom: 0, width: '60vw' }} />
+    <div className="mobile-move-zone" style={{ position: 'fixed', left: 0, bottom: 0, width: '45vw', height: '65vh', border: DEBUG_MOBILE_INPUT ? '2px solid rgba(64,140,255,.75)' : 'none', background: DEBUG_MOBILE_INPUT ? 'rgba(64,140,255,.08)' : 'transparent' }} />
+    <div className="mobile-look-zone" style={{ position: 'fixed', right: 0, top: 'max(84px, calc(env(safe-area-inset-top) + 56px))', bottom: 0, width: '60vw', border: DEBUG_MOBILE_INPUT ? '2px solid rgba(255,64,64,.75)' : 'none', background: DEBUG_MOBILE_INPUT ? 'rgba(255,64,64,.08)' : 'transparent' }} />
     {joystickVisual.active && <div style={{ position: 'fixed', left: joystickVisual.centerX - JOYSTICK_RADIUS, top: joystickVisual.centerY - JOYSTICK_RADIUS, width: JOYSTICK_RADIUS * 2, height: JOYSTICK_RADIUS * 2, borderRadius: '50%', border: '2px solid rgba(255,255,255,.85)', background: 'rgba(255,255,255,.12)', pointerEvents: 'none' }}>
       <div style={{ position: 'absolute', left: JOYSTICK_RADIUS + joystickVisual.x - 18, top: JOYSTICK_RADIUS + joystickVisual.y - 18, width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,.9)' }} />
     </div>}
@@ -143,6 +150,10 @@ export default function MobileGameInputLayer({ touchState, onCatch, isCatInCaptu
       <div>joy.x: {touchState.current.joystick.x.toFixed(2)}</div><div>joy.y: {touchState.current.joystick.y.toFixed(2)}</div>
       <div>look.dx: {touchState.current.look.dx.toFixed(2)}</div><div>look.dy: {touchState.current.look.dy.toFixed(2)}</div>
       <div>yaw: {cameraDebug?.yaw?.toFixed?.(3) ?? '0.000'}</div><div>pitch: {cameraDebug?.pitch?.toFixed?.(3) ?? '0.000'}</div>
+      <div>look.active: {String(touchState.current.look.active)}</div>
+      <div>lastLookX: {lastLookRef.current.x.toFixed(1)}</div><div>lastLookY: {lastLookRef.current.y.toFixed(1)}</div>
+      <div>lookMoveCount: {touchState.current.debug.lookMoveCount}</div>
+      <div>yawChangeCount: {touchState.current.debug.yawChangeCount}</div>
     </div>}
   </div>;
 }
