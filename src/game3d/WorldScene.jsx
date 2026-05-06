@@ -4,6 +4,7 @@ import { BIOMES } from './biomes/index.jsx';
 import FallingAmbience from './biomes/FallingAmbience.jsx';
 import TerrainGround from './biomes/TerrainGround.jsx';
 import SkyFauna from './biomes/SkyFauna.jsx';
+import BackgroundMountains from './biomes/BackgroundMountains.jsx';
 
 const THEMES = {
   'mystic-forest':   { skyTop:'#a8d6ff', skyBot:'#fdf3d0', sun:'#fff1c2', fog:'#e8f6dd', ground:'#7fc56b', pathColor:'#fbe9c4', accent:'#ffd7ec', ambient:0.45, sunIntensity:1.4 },
@@ -73,7 +74,8 @@ export default function WorldScene({ worldTheme = 'mystic-forest' }) {
       <directionalLight position={[-12, 10, -8]} intensity={0.3} color="#cfe4ff" />
       <directionalLight position={[0, 5, -18]} intensity={0.45} color={theme.accent} />
 
-      <TerrainGround color={theme.ground} pathColor={theme.pathColor} radius={120} amplitude={0.7} />
+      <TerrainGround color={theme.ground} pathColor={theme.pathColor} radius={80} />
+      <BackgroundMountains biome={worldTheme} />
 
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]}>
         <ringGeometry args={[3.5, 17, 64]} />
