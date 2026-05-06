@@ -387,7 +387,9 @@ export default function CatHunt3D() {
       <div>totalCats: {LEVELS[levelIndex].cats}</div>
       <div>nearestCatId: {String(nearestCatId)}</div>
       <div>nearestCatDistance: {Number.isFinite(nearestCatDistance) ? nearestCatDistance.toFixed(2) : '∞'}</div>
+      <div>visibleCats: {LEVELS[levelIndex].cats - capturedCatIds3D.length}</div>
       <div>isCatInCaptureRange: {String(isCatInCaptureRange)}</div>
+      <div>lastCatchResult: {hint === 'Acércate un poquito más' ? 'too_far' : hint === '¡Michi rescatado!' ? 'success' : 'idle'}</div>
       <div>speedMode: {speedMode}</div>
     </div>}
     {achievementToast && <div style={{ position: 'fixed', top: 70, right: 12, zIndex: 40, background: 'rgba(255,255,255,.92)', padding: '10px 12px', borderRadius: 12 }}>{achievementToast}</div>}

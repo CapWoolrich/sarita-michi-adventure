@@ -12,9 +12,11 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
   const characterRef = useRef();
   const [animState, setAnimState] = useState('idle');
   const cats = useMemo(() => Array.from({ length: catCount }, (_, i) => {
-    const angle = (i / catCount) * Math.PI * 2 + Math.random() * 0.25;
-    const radius = 10 + Math.random() * 12;
-    return { id: i, x: Math.cos(angle) * radius, z: Math.sin(angle) * radius, phase: Math.random() * 10, color: ['#ffe7b8', '#dcc8ff', '#c5f1e6', '#ffd6ba'][i % 4] };
+    const angle = (i / catCount) * Math.PI * 2 + Math.sin(i * 2.3) * 0.24;
+    const radius = 12 + (i % 3) * 3 + Math.cos(i * 1.9) * 1.2;
+    const x = Math.max(-30, Math.min(30, Math.cos(angle) * radius));
+    const z = Math.max(-30, Math.min(30, Math.sin(angle) * radius));
+    return { id: i, x, z, phase: i * 1.7, color: ['#ffe7b8', '#dcc8ff', '#c5f1e6', '#ffd6ba'][i % 4] };
   }), [catCount]);
 
   controlsApiRef.current = useRobloxLikeControls({ characterRef, touchState, isPaused, isLevelComplete, onDebugUpdate, speedMode, jumpRequestedRef });
@@ -47,7 +49,7 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
 
   return <>
     <WorldScene />
-    {cats.map((cat)=><CatEntity3D key={cat.id} cat={cat} captured={captureStateRef.current.capturedIds.has(cat.id)} highlight={nearestCatIdRef.current === cat.id && nearestInRangeRef.current} />)}
+    {cats.map((cat)=><CatEntity3D key={cat.id} cat={cat} visible={!captureStateRef.current.capturedIds.has(cat.id)} highlight={nearestCatIdRef.current === cat.id && nearestInRangeRef.current} />)}
     <CharacterSarita3D characterRef={characterRef} animState={animState} />
   </>;
 }
@@ -118,13 +120,13 @@ const Game3DCanvas = forwardRef(function Game3DCanvas({ touchState, onPlayerPosi
       <div>lookMoveCount: {debugState.lookMoveCount}</div><div>cameraApplyCount: {debugState.cameraApplyCount}</div>
       <div>playerPosition: {debugState.playerPosition.x.toFixed(2)}, {debugState.playerPosition.y.toFixed(2)}, {debugState.playerPosition.z.toFixed(2)}</div>
       <div>playerRotation: {debugState.playerRotation.toFixed(3)}</div>
-      <div>captured: {capturedCatIds.length}/{catCount}</div>
+      <div>totalCats: {catCount}</div><div>visibleCats: {catCount - capturedCatIds.length}</div><div>captured: {capturedCatIds.length}/{catCount}</div>
       <div>nearestCatId: {String(captureStateRef.current.nearestCatId)}</div>
       <div>nearestCatDistance: {Number.isFinite(captureStateRef.current.nearestDistance) ? captureStateRef.current.nearestDistance.toFixed(2) : '∞'}</div>
       <div>isCatInCaptureRange: {String(captureStateRef.current.inRange)}</div>
       <div>lastCatchResult: {lastCatchResult ? JSON.stringify(lastCatchResult) : 'null'}</div>
       <div>speedMode: {speedMode}</div>
-      <div>isJumping: {String(debugState.isJumping)}</div>
+      <div>grounded: {String(debugState.grounded)}</div><div>isJumping: {String(debugState.isJumping)}</div><div>verticalVelocity: {(debugState.verticalVelocity ?? 0).toFixed(3)}</div>
       <div style={{ display:'flex', gap:6, marginTop:6 }}>
         <button data-game-ui="true" onClick={() => controlsApiRef.current?.adjustYaw?.(-0.25)}>Yaw -</button>
         <button data-game-ui="true" onClick={() => controlsApiRef.current?.adjustYaw?.(0.25)}>Yaw +</button>

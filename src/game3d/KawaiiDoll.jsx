@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import * as THREE from 'three';
 import { useAnimations, useGLTF } from '@react-three/drei';
 
 const pickAnimationName = (availableNames, requested) => {
@@ -16,6 +17,21 @@ export default function KawaiiDoll({ animation = 'idle', position = [0, 0, 0], r
   const group = useRef();
   const { scene, animations } = useGLTF(url);
   const { actions, names } = useAnimations(animations, group);
+
+  useEffect(() => {
+    scene?.traverse?.((obj) => {
+      if (!obj.isMesh || !obj.material) return;
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const mat of mats) {
+        if (!mat) continue;
+        const n = `${obj.name || ''} ${mat.name || ''}`.toLowerCase();
+        if (n.includes('hair') || n.includes('bang')) {
+          mat.side = THREE.FrontSide;
+          mat.depthWrite = true;
+        }
+      }
+    });
+  }, [scene]);
 
   useEffect(() => {
     if (!actions) return;
