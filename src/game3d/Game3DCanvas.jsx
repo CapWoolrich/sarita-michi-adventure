@@ -16,20 +16,27 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
     return { id: i, x: Math.cos(angle) * radius, z: Math.sin(angle) * radius, phase: Math.random() * 10, color: ['#ffe7b8', '#dcc8ff', '#c5f1e6', '#ffd6ba'][i % 4] };
   }), [catCount]);
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     const joy = touchState.current.joy;
     const look = touchState.current.look;
-    cameraStateRef.current.yaw -= look.dx * 0.005;
-    cameraStateRef.current.pitch = THREE.MathUtils.clamp(cameraStateRef.current.pitch - look.dy * 0.0035, -0.35, 0.5);
+    cameraStateRef.current.yaw -= look.dx * 0.0075;
+    cameraStateRef.current.pitch = THREE.MathUtils.clamp(cameraStateRef.current.pitch - look.dy * 0.0055, -0.35, 0.65);
     look.dx = 0; look.dy = 0;
     if (!characterRef.current) return;
-    const cameraForward = new THREE.Vector3(Math.sin(cameraStateRef.current.yaw), 0, Math.cos(cameraStateRef.current.yaw)).normalize();
-    const cameraRight = new THREE.Vector3(cameraForward.z, 0, -cameraForward.x).normalize();
+    const strafeInput = THREE.MathUtils.clamp(joy.x, -1, 1);
+    const forwardInput = THREE.MathUtils.clamp(-joy.y, -1, 1);
+    const magnitude = Math.hypot(strafeInput, forwardInput);
+    const deadzone = 0.1;
+    const speed = magnitude < deadzone ? 0 : magnitude;
+    const cameraForward = new THREE.Vector3();
+    state.camera.getWorldDirection(cameraForward);
+    cameraForward.y = 0;
+    cameraForward.normalize();
+    const cameraRight = new THREE.Vector3().crossVectors(cameraForward, new THREE.Vector3(0, 1, 0)).normalize();
     const inputDir = new THREE.Vector3()
-      .addScaledVector(cameraForward, joy.y)
-      .addScaledVector(cameraRight, joy.x);
-    const speed = inputDir.length();
-    if (speed > 0.01) {
+      .addScaledVector(cameraForward, speed ? forwardInput / Math.max(1, magnitude) : 0)
+      .addScaledVector(cameraRight, speed ? strafeInput / Math.max(1, magnitude) : 0);
+    if (inputDir.lengthSq() > 0.0001) {
       const dir = inputDir.normalize();
       characterRef.current.position.addScaledVector(dir, Math.min(5.1 * delta, 0.14));
       characterRef.current.position.x = THREE.MathUtils.clamp(characterRef.current.position.x, -36, 36);
