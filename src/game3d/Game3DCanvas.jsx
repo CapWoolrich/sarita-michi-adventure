@@ -18,6 +18,11 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
     return { id: i, x: Math.cos(angle) * radius, z: Math.sin(angle) * radius, phase: Math.random() * 10, color: ['#ffe7b8', '#dcc8ff', '#c5f1e6', '#ffd6ba'][i % 4] };
   }), [catCount]);
 
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  const forward = new THREE.Vector3();
+  const right = new THREE.Vector3();
+  const moveDirection = new THREE.Vector3();
+
   useFrame((state, delta) => {
     const joy = touchState.current.joy;
     const look = touchState.current.look;
@@ -35,14 +40,17 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
     const magnitude = Math.hypot(strafeInput, forwardInput);
     const deadzone = 0.1;
     const speed = magnitude < deadzone ? 0 : magnitude;
-    const yaw = cameraStateRef.current.yaw;
-    const cameraForward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).normalize();
-    const cameraRight = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)).normalize();
-    const inputDir = new THREE.Vector3()
-      .addScaledVector(cameraForward, speed ? forwardInput / Math.max(1, magnitude) : 0)
-      .addScaledVector(cameraRight, speed ? strafeInput / Math.max(1, magnitude) : 0);
-    if (inputDir.lengthSq() > 0.0001) {
-      const dir = inputDir.normalize();
+    state.camera.getWorldDirection(forward);
+    forward.y = 0;
+    if (forward.lengthSq() > 0.0001) forward.normalize();
+    right.crossVectors(forward, worldUp).normalize();
+
+    moveDirection.set(0, 0, 0)
+      .addScaledVector(forward, speed ? forwardInput / Math.max(1, magnitude) : 0)
+      .addScaledVector(right, speed ? strafeInput / Math.max(1, magnitude) : 0);
+
+    if (moveDirection.lengthSq() > 0.0001) {
+      const dir = moveDirection.normalize();
       characterRef.current.position.addScaledVector(dir, Math.min(5.1 * delta, 0.14));
       characterRef.current.position.x = THREE.MathUtils.clamp(characterRef.current.position.x, -36, 36);
       characterRef.current.position.z = THREE.MathUtils.clamp(characterRef.current.position.z, -36, 36);
