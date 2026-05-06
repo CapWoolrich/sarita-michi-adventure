@@ -33,6 +33,7 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
     if (look.dx !== 0 || look.dy !== 0) {
       cameraStateRef.current.yaw -= look.dx * LOOK_SENSITIVITY_X;
       cameraStateRef.current.pitch = THREE.MathUtils.clamp(cameraStateRef.current.pitch - look.dy * LOOK_SENSITIVITY_Y, CAMERA_MIN_PITCH, CAMERA_MAX_PITCH);
+      touchState.current.debug.yawChangeCount += 1;
       if (DEBUG_CAMERA) console.log('[camera] consume look', { dx: look.dx, dy: look.dy, yaw: cameraStateRef.current.yaw, pitch: cameraStateRef.current.pitch, active: look.active });
       look.dx = 0;
       look.dy = 0;

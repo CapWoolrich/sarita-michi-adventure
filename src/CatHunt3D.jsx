@@ -135,7 +135,7 @@ export default function CatHunt3D() {
   const [lastFoundProfiles, setLastFoundProfiles] = useState([]);
   const [settings, setSettings] = useState(() => safeRead('settings', { look: 'media', quality: 'normal' }));
   const mountRef = useRef(null); const gameRef = useRef(null); const game3dRef = useRef(null); const timerRef = useRef(null); const pendingLevelRef = useRef(null);
-  const touchState = useRef({ joystick: { active: false, x: 0, y: 0, magnitude: 0 }, joy: { active: false, x: 0, y: 0, magnitude: 0 }, look: { active: false, dx: 0, dy: 0 } });
+  const touchState = useRef({ joystick: { active: false, x: 0, y: 0, magnitude: 0 }, joy: { active: false, x: 0, y: 0, magnitude: 0 }, look: { active: false, dx: 0, dy: 0 }, debug: { lookMoveCount: 0, yawChangeCount: 0 } });
   const [cameraDebug, setCameraDebug] = useState({ yaw: 0, pitch: 0 });
   const audioRef = useRef({ started: false, sounds: {} });
   const isMobile = useMemo(() => /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent), []);
