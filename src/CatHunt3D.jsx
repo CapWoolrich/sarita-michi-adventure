@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import * as Tone from 'tone';
 import Game3DCanvas from './game3d/Game3DCanvas';
+import CameraLookPad from './game3d/CameraLookPad';
 
 const GAME_TITLE = 'Sarita y los michi perdidos';
 const SUBTITLE = 'Una aventura mágica para rescatar gatitos perdidos';
