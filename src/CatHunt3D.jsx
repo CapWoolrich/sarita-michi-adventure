@@ -16,6 +16,13 @@ import PauseMenu from './game/components/PauseMenu';
 import SettingsPanel from './game/components/SettingsPanel';
 import TutorialOverlay from './game/components/TutorialOverlay';
 import MiniMap from './game/components/MiniMap';
+import HealthBar from './game/components/HealthBar';
+import LoadingScreen from './game/components/LoadingScreen';
+import DifficultySelector from './game/components/DifficultySelector';
+import DailyChallengeBadge from './game/components/DailyChallengeBadge';
+import ShareProgressModal from './game/components/ShareProgressModal';
+import { DIFFICULTY_ENEMY_COUNT } from './game/health/healthSystem';
+import { isChallengeCompletedToday, markChallengeCompleted } from './game/dailyChallenge';
 import { startBiomeAudio, muteBiomeAudio, unmuteBiomeAudio, playCaptureChime } from './game/audio/BiomeAudio.js';
 
 const DEBUG_INPUT = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugInput') === '1';
@@ -35,6 +42,11 @@ export default function CatHunt3D() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [streakInfo, setStreakInfo] = useState(null);
+  const [isLoadingScreen, setIsLoadingScreen] = useState(false);
+  const [isDifficultyOpen, setIsDifficultyOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [allWorldsCompleted, setAllWorldsCompleted] = useState(false);
+  const invulnUntilRef = useRef(0);
   const [isTransitionOpen, setIsTransitionOpen] = useState(false);
   const game3dRef = useRef(null);
   const touchState = useRef({
@@ -86,6 +98,26 @@ export default function CatHunt3D() {
   useEffect(() => {
     if (mute || !settings.audioEnabled) muteBiomeAudio(); else unmuteBiomeAudio();
   }, [mute, settings.audioEnabled]);
+
+  // Loading screen al cambiar de mundo
+  useEffect(() => {
+    if (screen === 'game') {
+      setIsLoadingScreen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runtime.worldId]);
+
+  // Sincronizar invulnerable ref con health
+  useEffect(() => {
+    invulnUntilRef.current = runtime.health?.invulnUntil ?? 0;
+  }, [runtime.health?.invulnUntil]);
+
+  // Detectar si completó todos los mundos
+  useEffect(() => {
+    if (runtime.worldId === 'world-11' && runtime.isLevelComplete) {
+      setAllWorldsCompleted(true);
+    }
+  }, [runtime.worldId, runtime.isLevelComplete]);
 
   // Detecta nivel completado → abre transición
   useEffect(() => {
@@ -175,6 +207,9 @@ export default function CatHunt3D() {
           onHowToPlay={() => showFeedback('Mueve el joystick · Toca Atrapar al acercarte a un michi')}
           onCredits={() => showFeedback('Creado por Bernard y Sarita 💜')}
           onAchievements={() => setIsAchievementsOpen(true)}
+          onShare={() => setIsShareOpen(true)}
+          onDifficulty={() => setIsDifficultyOpen(true)}
+          currentDifficulty={runtime.difficulty}
           dailyStreak={settings.dailyStreak?.count ?? 0}
           goldenCats={settings.goldenCatsCaught ?? 0}
           highScores={settings.highScores ?? {}}
@@ -204,6 +239,23 @@ export default function CatHunt3D() {
           isOpen={isAchievementsOpen}
           achievements={achievementsState}
           onClose={() => setIsAchievementsOpen(false)}
+        />
+        <DifficultySelector
+          isOpen={isDifficultyOpen}
+          current={runtime.difficulty}
+          allCompleted={false}
+          onSelect={(diff) => {
+            runtime.setDifficulty(diff);
+            setSettings((s) => ({ ...s, difficulty: diff }));
+            setIsDifficultyOpen(false);
+          }}
+          onClose={() => setIsDifficultyOpen(false)}
+        />
+        <ShareProgressModal
+          isOpen={isShareOpen}
+          settings={settings}
+          achievements={achievementsState}
+          onClose={() => setIsShareOpen(false)}
         />
         <AchievementToast achievement={achievementToast} />
       </>
@@ -243,6 +295,9 @@ export default function CatHunt3D() {
         worldTheme={runtime.worldConfig.theme}
         mapRadius={28}
         lowQuality={settings.graphicsQuality === 'low'}
+        enemyCount={DIFFICULTY_ENEMY_COUNT[runtime.difficulty] ?? 1}
+        onEnemyHit={() => { runtime.takeDamage?.(); haptic.fail(); }}
+        invulnUntilRef={invulnUntilRef}
         onNearestCatChange={(catId, distance) => runtime.setNearestCat({ catId, distance })}
         runtimeKey={`${runtime.worldId}-${runtime.levelId}-${runtime.totalCats}`}
       />
@@ -282,6 +337,7 @@ export default function CatHunt3D() {
       />
 
       <MiniMap getRadarSnapshot={() => game3dRef.current?.getRadarSnapshot?.()} />
+      <HealthBar current={runtime.health?.current ?? 3} max={runtime.health?.max ?? 3} />
 
       <PauseMenu
         isOpen={isPauseMenuOpen}
@@ -317,6 +373,37 @@ export default function CatHunt3D() {
           setIsTutorialOpen(false);
           setSettings((s) => ({ ...s, tutorialSeen: true }));
         }}
+      />
+
+      <LoadingScreen
+        isOpen={isLoadingScreen}
+        worldName={runtime.worldConfig.name}
+        onComplete={() => setIsLoadingScreen(false)}
+      />
+
+      <DifficultySelector
+        isOpen={isDifficultyOpen || allWorldsCompleted}
+        current={runtime.difficulty}
+        allCompleted={allWorldsCompleted}
+        onSelect={(diff) => {
+          runtime.setDifficulty(diff);
+          setSettings((s) => ({ ...s, difficulty: diff }));
+          setIsDifficultyOpen(false);
+          if (allWorldsCompleted) {
+            setAllWorldsCompleted(false);
+            // Reiniciar desde mundo 1
+            runtime.startLevel('world-1', 'nivel-1');
+            setScreen('game');
+          }
+        }}
+        onClose={() => setIsDifficultyOpen(false)}
+      />
+
+      <ShareProgressModal
+        isOpen={isShareOpen}
+        settings={settings}
+        achievements={achievementsState}
+        onClose={() => setIsShareOpen(false)}
       />
 
       <AchievementToast achievement={achievementToast} />

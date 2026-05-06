@@ -1450,3 +1450,273 @@ body { overflow: hidden; }
   border-color: rgba(255, 208, 102, 0.6);
   color: #a87c1f;
 }
+
+/* ============================================
+   PHASE 9 — Health, Loading, Difficulty, Share, Daily, Enemy
+   ============================================ */
+
+/* HEALTH BAR */
+.kw-health-bar {
+  position: fixed;
+  top: max(50px, calc(env(safe-area-inset-top) + 42px));
+  left: max(10px, env(safe-area-inset-left));
+  z-index: 87;
+  display: flex;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255, 250, 252, 0.78), rgba(255, 220, 230, 0.65));
+  backdrop-filter: var(--kw-blur);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 14px rgba(200, 50, 100, 0.18);
+  pointer-events: auto;
+  animation: kw-fade-down 0.5s ease-out;
+}
+
+.kw-heart {
+  filter: drop-shadow(0 1px 2px rgba(200, 50, 100, 0.3));
+  transition: transform 0.18s ease;
+}
+
+.kw-heart-on { animation: kw-heart-beat 1.4s ease-in-out infinite; }
+
+@keyframes kw-heart-beat {
+  0%, 100% { transform: scale(1); }
+  10% { transform: scale(1.18); }
+  20% { transform: scale(1); }
+  30% { transform: scale(1.12); }
+  40% { transform: scale(1); }
+}
+
+.kw-invuln { animation: kw-invuln-flash 0.4s ease-in-out infinite; }
+@keyframes kw-invuln-flash { 50% { opacity: 0.4; } }
+
+/* LOADING SCREEN */
+.kw-loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  background: linear-gradient(180deg, #fff5fa 0%, #ffe5f0 60%, #fff0e5 100%);
+  display: grid;
+  place-items: center;
+  animation: kw-fade-in 0.3s ease-out;
+}
+
+.kw-loading-card {
+  width: min(420px, 90%);
+  text-align: center;
+  padding: 32px 24px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 30px 70px rgba(110, 63, 154, 0.25);
+}
+
+.kw-loading-icon {
+  font-size: 72px;
+  margin-bottom: 12px;
+  animation: kw-spin-slow 4s linear infinite;
+}
+
+@keyframes kw-spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.kw-loading-world {
+  font-size: 28px;
+  font-weight: 900;
+  color: #6e3f9a;
+  font-family: 'Georgia', serif;
+  margin-bottom: 18px;
+}
+
+.kw-loading-tip {
+  background: rgba(192, 132, 252, 0.1);
+  border-radius: 16px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kw-loading-tip-label {
+  font-size: 12px;
+  color: #8b5fb8;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.kw-loading-tip-text {
+  font-size: 14px;
+  color: #5a4880;
+  line-height: 1.4;
+}
+
+.kw-loading-bar {
+  height: 8px;
+  background: rgba(192, 132, 252, 0.2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.kw-loading-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #c084fc, #ec4899, #ffd066);
+  border-radius: 999px;
+  transition: width 0.1s linear;
+}
+
+/* DIFFICULTY SELECTOR */
+.kw-difficulty-panel {
+  width: min(620px, 100%);
+  border-radius: 26px;
+  background: linear-gradient(180deg, rgba(255, 250, 252, 0.96), rgba(248, 240, 250, 0.92));
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 30px 70px rgba(35, 28, 78, 0.45);
+  padding: 28px;
+  text-align: center;
+  animation: kw-trans-card-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.kw-difficulty-trophy {
+  font-size: 80px;
+  margin-bottom: 6px;
+  filter: drop-shadow(0 4px 12px rgba(255, 208, 102, 0.6));
+  animation: kw-bounce-trophy 1.5s ease-in-out infinite;
+}
+
+@keyframes kw-bounce-trophy {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.kw-difficulty-header h2 {
+  margin: 4px 0;
+  font-size: 24px;
+  color: #6e3f9a;
+  font-family: 'Georgia', serif;
+  font-weight: 900;
+}
+
+.kw-difficulty-header small {
+  color: var(--kw-text-soft);
+  font-size: 13px;
+}
+
+.kw-difficulty-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.kw-difficulty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 14px;
+  border-radius: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  position: relative;
+}
+
+.kw-difficulty-card:hover { transform: translateY(-3px); }
+
+.kw-difficulty-card.kw-diff-mint { border-color: #a5e8c8; }
+.kw-difficulty-card.kw-diff-gold { border-color: #ffd066; }
+.kw-difficulty-card.kw-diff-red  { border-color: #ff8888; }
+
+.kw-difficulty-card.kw-diff-current {
+  box-shadow: 0 8px 24px rgba(192, 132, 252, 0.4);
+  background: linear-gradient(135deg, rgba(255, 250, 252, 0.95), rgba(248, 240, 250, 0.85));
+}
+
+.kw-difficulty-icon { font-size: 44px; }
+.kw-difficulty-title { font-size: 18px; font-weight: 800; color: #6e3f9a; }
+.kw-difficulty-desc { font-size: 12px; color: var(--kw-text-soft); line-height: 1.3; }
+.kw-difficulty-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #c084fc, #ec4899);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+/* SHARE PROGRESS */
+.kw-share-panel {
+  width: min(540px, 100%);
+  max-height: 90vh;
+  border-radius: 26px;
+  background: linear-gradient(180deg, rgba(255, 250, 252, 0.95), rgba(248, 240, 250, 0.92));
+  backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 30px 70px rgba(35, 28, 78, 0.4);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: kw-trans-card-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.kw-share-body {
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+}
+
+.kw-share-canvas {
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  border-radius: 16px;
+  box-shadow: 0 6px 16px rgba(35, 28, 78, 0.18);
+}
+
+.kw-share-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* DAILY CHALLENGE BADGE */
+.kw-daily-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(255, 250, 252, 0.85), rgba(255, 230, 250, 0.7));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  text-align: left;
+  width: 100%;
+  max-width: 340px;
+  box-shadow: 0 4px 14px rgba(110, 63, 154, 0.18);
+}
+.kw-daily-badge:hover:not(:disabled) { transform: translateY(-2px); }
+.kw-daily-badge:disabled { cursor: default; opacity: 0.7; }
+.kw-daily-icon-wrap { position: relative; font-size: 32px; flex-shrink: 0; }
+.kw-daily-check { position: absolute; bottom: -4px; right: -4px; background: #4ade80; color: white; border-radius: 50%; width: 18px; height: 18px; display: grid; place-items: center; font-size: 12px; font-weight: 800; }
+.kw-daily-meta { display: flex; flex-direction: column; gap: 1px; }
+.kw-daily-label { font-size: 10px; color: var(--kw-text-soft); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+.kw-daily-meta strong { font-size: 14px; color: var(--kw-text); }
+.kw-daily-meta small { font-size: 11px; color: var(--kw-text-soft); }
+.kw-daily-timer { font-size: 10px; color: #8b5fb8; margin-top: 2px; font-weight: 600; }

@@ -234,7 +234,7 @@ function SplashScene() {
   );
 }
 
-export default function SplashScreen({ onStart, onContinue, onWorlds, onCollection, onHowToPlay, onCredits, onAchievements, hasProgress = false, dailyStreak = 0, goldenCats = 0, highScores = {} }) {
+export default function SplashScreen({ onStart, onContinue, onWorlds, onCollection, onHowToPlay, onCredits, onAchievements, onShare, onDifficulty, currentDifficulty = 'medium', hasProgress = false, dailyStreak = 0, goldenCats = 0, highScores = {} }) {
   const totalScore = Object.values(highScores).reduce((s, v) => s + (v ?? 0), 0);
   return (
     <div className="kw-splash" data-game-ui="true">
@@ -299,6 +299,14 @@ export default function SplashScreen({ onStart, onContinue, onWorlds, onCollecti
             </button>
             <button className="kw-splash-btn kw-splash-btn-sm" onClick={onAchievements}>
               <span aria-hidden>🏆</span> Logros
+            </button>
+          </div>
+          <div className="kw-splash-secondary-row">
+            <button className="kw-splash-btn kw-splash-btn-sm" onClick={onDifficulty}>
+              <span aria-hidden>{currentDifficulty === 'hard' ? '🔥' : currentDifficulty === 'easy' ? '🌸' : '🌟'}</span> Dificultad
+            </button>
+            <button className="kw-splash-btn kw-splash-btn-sm" onClick={onShare}>
+              <span aria-hidden>📤</span> Compartir
             </button>
           </div>
         </div>

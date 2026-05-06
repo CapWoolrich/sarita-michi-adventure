@@ -51,7 +51,7 @@ export function generateLevelCats(worldConfig, levelConfig) {
     const profile = CAT_PROFILES[index % CAT_PROFILES.length];
     // Distribución áurea dentro del arco seguro
     const angle = aMin + ((index * GOLDEN) % arc);
-    const radius = 5.5 + (index % 4) * 1.6 + ((index * 0.7) % 1.4); // 5.5 .. 11
+    const radius = 6 + ((index * 1.7) % 18); // 6..24, mucho más dispersos
     const x = Math.cos(angle) * radius;
     const z = Math.sin(angle) * radius;
     const y = 0.95; // ligeramente más alto para asegurar visibilidad por encima de hierba/props

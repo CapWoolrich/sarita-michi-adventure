@@ -1,3 +1,4 @@
+import NatureModel from './NatureAssets.jsx';
 import {
   PineTree, SakuraTree, PalmTree, CrystalSpire, BareTree, CottonTree,
   GrassPatches, FlowerScatter, MushroomCluster, RockCluster, FloatingCloud,
@@ -24,20 +25,80 @@ function backRing(count, rmin = 22, rmax = 36, jitter = 0.6) {
   });
 }
 
-/* ===== 1. BOSQUE MÍSTICO ===== */
+/* ===== 1. BOSQUE MÍSTICO — con Stylized Nature MegaKit ===== */
 export function MysticForestBiome() {
+  const treeKinds = ['CommonTree1', 'CommonTree3'];
   return (
     <>
-      {ring(34, 12, 22, 0.5).map((p, i) => (
-        <PineTree key={i} position={p} scale={0.85 + (i % 5) * 0.12} color={i % 3 === 0 ? '#5fa667' : '#7ac985'} />
+      {/* Árboles GLB con variedad */}
+      {ring(28, 14, 24, 0.6).map((p, i) => (
+        <NatureModel
+          key={`t-${i}`}
+          kind={treeKinds[i % treeKinds.length]}
+          position={p}
+          rotation={[0, (i * 0.97) % 6.28, 0]}
+          scale={1.2 + (i % 5) * 0.18}
+        />
       ))}
-      {backRing(22).map((p, i) => (
-        <PineTree key={`b-${i}`} position={p} scale={1.1 + (i % 4) * 0.15} color={i % 2 === 0 ? '#4a8857' : '#5fa667'} />
+      {backRing(20).map((p, i) => (
+        <NatureModel
+          key={`bt-${i}`}
+          kind={i % 2 === 0 ? 'CommonTree1' : 'CommonTree3'}
+          position={p}
+          rotation={[0, (i * 0.7) % 6.28, 0]}
+          scale={1.6 + (i % 4) * 0.22}
+        />
       ))}
-      <GrassPatches count={150} area={28} color="#7ac56b" />
-      <FlowerScatter count={48} area={20} palette={['#ffd0e7', '#ffe39b', '#dab2ff', '#ffb6d0']} />
-      <MushroomCluster positions={ring(22, 5, 14).map(([x, , z]) => [x, 0, z])} color="#e98890" />
-      <RockCluster positions={ring(16, 8, 22).map(([x, , z]) => [x, 0.2, z])} color="#7c8580" />
+      {/* Hongos GLB */}
+      {ring(18, 5, 16, 0.7).map((p, i) => (
+        <NatureModel
+          key={`m-${i}`}
+          kind={i % 2 === 0 ? 'MushroomCommon' : 'MushroomLaeti'}
+          position={p}
+          rotation={[0, (i * 1.3) % 6.28, 0]}
+          scale={0.6 + (i % 3) * 0.15}
+        />
+      ))}
+      {/* Piedras GLB */}
+      {ring(12, 7, 22, 0.5).map((p, i) => (
+        <NatureModel
+          key={`r-${i}`}
+          kind={i % 2 === 0 ? 'RockMedium1' : 'RockMedium2'}
+          position={p}
+          rotation={[0, (i * 0.5) % 6.28, 0]}
+          scale={0.8 + (i % 3) * 0.2}
+        />
+      ))}
+      {/* Helechos y plantas decorativas */}
+      {ring(20, 6, 18, 0.7).map((p, i) => (
+        <NatureModel
+          key={`f-${i}`}
+          kind={i % 3 === 0 ? 'Fern' : i % 3 === 1 ? 'Plant1' : 'BushFlowers'}
+          position={p}
+          rotation={[0, (i * 1.1) % 6.28, 0]}
+          scale={0.7 + (i % 4) * 0.15}
+        />
+      ))}
+      {/* Flores GLB */}
+      {ring(14, 6, 16, 0.6).map((p, i) => (
+        <NatureModel
+          key={`fl-${i}`}
+          kind={i % 2 === 0 ? 'Flower3Group' : 'Flower4Group'}
+          position={p}
+          rotation={[0, (i * 0.83) % 6.28, 0]}
+          scale={0.7 + (i % 3) * 0.15}
+        />
+      ))}
+      {/* Hierba decorativa GLB */}
+      {ring(30, 4, 18, 0.8).map((p, i) => (
+        <NatureModel
+          key={`g-${i}`}
+          kind="GrassTall"
+          position={p}
+          rotation={[0, (i * 1.5) % 6.28, 0]}
+          scale={0.5 + (i % 4) * 0.1}
+        />
+      ))}
     </>
   );
 }
