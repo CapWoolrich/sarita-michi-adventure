@@ -11,6 +11,12 @@ export const LEVELS = [
       { id: 'luna', name: 'Luna', personality: 'Curiosa y brillante', phrase: 'Sigue las luciérnagas', color: '#c7dcff' },
       { id: 'kiki', name: 'Kiki', personality: 'Juguetona y feliz', phrase: 'Salta entre senderos', color: '#ffe28d' },
       { id: 'yuki', name: 'Yuki', personality: 'Suave y tranquila', phrase: 'Descansa junto al lago', color: '#f7f7ff' }
+    ],
+    catPositions: [
+      [3.6, 0.72, -2.6],
+      [-8.5, 0.72, 9.4],
+      [11.8, 0.72, 8.2],
+      [-13.4, 0.72, -9.8]
     ]
   },
   {
@@ -25,6 +31,14 @@ export const LEVELS = [
       { id: 'niko', name: 'Niko', personality: 'Valiente y veloz', phrase: 'Explora troncos secretos', color: '#c2f5db' },
       { id: 'tofu', name: 'Tofu', personality: 'Calmado y tierno', phrase: 'Busca honguitos brillantes', color: '#e3e8ef' },
       { id: 'chispa', name: 'Chispa', personality: 'Traviesa y luminosa', phrase: 'Deja huellas doradas', color: '#ffbd93' }
+    ],
+    catPositions: [
+      [4.4, 0.72, -3.2],
+      [-9.2, 0.72, 11.4],
+      [12.8, 0.72, 7.5],
+      [-14.2, 0.72, -8.4],
+      [16.4, 0.72, -12.8],
+      [-4.8, 0.72, 15.5]
     ]
   }
 ];
@@ -36,8 +50,10 @@ const SPAWN_POINTS = [
 ];
 
 export function generateLevelCats(levelConfig) {
-  return Array.from({ length: levelConfig.catCount }, (_, index) => {
+  const count = Number(levelConfig?.catCount ?? 0);
+  return Array.from({ length: count }, (_, index) => {
     const profile = levelConfig.catProfiles[index % levelConfig.catProfiles.length];
+    const position = levelConfig.catPositions?.[index] ?? SPAWN_POINTS[index % SPAWN_POINTS.length];
     return {
       id: `${levelConfig.id}-${profile.id}-${index}`,
       profileId: profile.id,
@@ -45,7 +61,7 @@ export function generateLevelCats(levelConfig) {
       personality: profile.personality,
       phrase: profile.phrase,
       color: profile.color,
-      position: SPAWN_POINTS[index % SPAWN_POINTS.length],
+      position,
       points: 100
     };
   });
