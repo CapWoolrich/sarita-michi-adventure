@@ -65,7 +65,7 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
   </>;
 }
 
-const Game3DCanvas = forwardRef(function Game3DCanvas({ touchState, onPlayerPositionChange, onNearestCatChange, onCatCaptured, captureRadius, catCount = 8 }, ref) {
+const Game3DCanvas = forwardRef(function Game3DCanvas({ touchState, onPlayerPositionChange, onNearestCatChange, captureRadius, catCount = 8 }, ref) {
   const nearestCatIdRef = useRef(null);
   const nearestInRangeRef = useRef(false);
   const captureStateRef = useRef({ player: { x: 0, y: 0, z: 0 }, nearestCatId: null, nearestDistance: Infinity, inRange: false, capturedIds: new Set() });
@@ -79,12 +79,13 @@ const Game3DCanvas = forwardRef(function Game3DCanvas({ touchState, onPlayerPosi
     triggerCatchAnimation: () => true,
     attemptCatch: () => {
       const nearestId = captureStateRef.current.nearestCatId;
-      if (nearestId == null || !captureStateRef.current.inRange || captureStateRef.current.capturedIds.has(nearestId)) return false;
+      if (nearestId == null) return { success: false, reason: 'no_cat' };
+      if (captureStateRef.current.capturedIds.has(nearestId)) return { success: false, reason: 'already_captured', catId: nearestId };
+      if (!captureStateRef.current.inRange) return { success: false, reason: 'too_far', nearestCatId: nearestId, distance: captureStateRef.current.nearestDistance };
       captureStateRef.current.capturedIds.add(nearestId);
-      onCatCaptured?.(nearestId);
-      return true;
+      return { success: true, catId: nearestId, distance: captureStateRef.current.nearestDistance };
     }
-  }), [onCatCaptured]);
+  }), []);
   return <div style={{ position:'fixed', inset:0, zIndex:2 }}>
     <Canvas shadows dpr={[1,1.5]}>
       <SceneRuntime touchState={touchState} onPlayerPositionChange={onPlayerPositionChange} onNearestCatChange={handleNearestCatChange} captureRadius={captureRadius} nearestCatIdRef={nearestCatIdRef} nearestInRangeRef={nearestInRangeRef} catCount={catCount} captureStateRef={captureStateRef} />

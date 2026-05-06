@@ -126,6 +126,8 @@ export default function CatHunt3D() {
   const [nearestCatId, setNearestCatId] = useState(null);
   const [nearestCatDistance, setNearestCatDistance] = useState(Infinity);
   const [isCatInCaptureRange, setIsCatInCaptureRange] = useState(false);
+  const [capturedCatIds3D, setCapturedCatIds3D] = useState([]);
+  const [levelStartNonce, setLevelStartNonce] = useState(0);
   const rescueToastTimeoutRef = useRef(null);
   const [paused, setPaused] = useState(false);
   const [lastFoundProfiles, setLastFoundProfiles] = useState([]);
@@ -282,20 +284,23 @@ export default function CatHunt3D() {
 
 
   const handle3DCapture = useCallback((catId) => {
+    if (capturedCatIds3D.includes(catId)) return false;
+    setCapturedCatIds3D((prev) => [...prev, catId]);
     setFound((f) => f + 1);
     setScore((sc) => sc + 120);
     setHint('¡Michi rescatado!');
     playSfx('meowCatch');
     playSfx('sparkle');
-  }, [playSfx]);
+    return true;
+  }, [capturedCatIds3D, playSfx]);
 
   const handleCatchAction = useCallback(() => {
     playSfx('tap');
-    const caught3D = game3dRef.current?.attemptCatch?.();
-    if (caught3D) return;
-    setHint('Acércate un poquito más');
-    if (!game3dRef.current) gameRef.current?.tryCatchCat?.();
-  }, [playSfx]);
+    const result = game3dRef.current?.attemptCatch?.();
+    if (!result) { gameRef.current?.tryCatchCat?.(); return; }
+    if (result.success) { handle3DCapture(result.catId); return; }
+    if (result.reason === 'too_far' || result.reason === 'no_cat') setHint('Acércate un poquito más');
+  }, [handle3DCapture, playSfx]);
   const startLevel = async (idx, reset = false) => {
     await initAudio();
     const targetIndex = reset ? 0 : idx;
@@ -304,6 +309,12 @@ export default function CatHunt3D() {
     setPaused(false);
     setHint('Busca a los michi perdidos...');
     setRescueToast('');
+    setCapturedCatIds3D([]);
+    setNearestCatId(null);
+    setNearestCatDistance(Infinity);
+    setIsCatInCaptureRange(false);
+    setPlayerPosition3D({ x: 0, y: 0, z: 0 });
+    setLevelStartNonce((n) => n + 1);
     if (reset) { setScore(0); setLevelIndex(0); }
     else setLevelIndex(targetIndex);
     setScreen('playing');
@@ -320,7 +331,7 @@ export default function CatHunt3D() {
 
     {screen === 'playing' && <>
       <div ref={mountRef} style={{ position: 'fixed', inset: 0, opacity: 0, pointerEvents: 'none' }} />
-      <Game3DCanvas ref={game3dRef} touchState={touchState} catCount={LEVELS[levelIndex].cats} captureRadius={2} onCatCaptured={handle3DCapture} onPlayerPositionChange={setPlayerPosition3D} onNearestCatChange={(id, distance, inRange) => { setNearestCatId(id); setNearestCatDistance(distance); setIsCatInCaptureRange(inRange); }} />
+      <Game3DCanvas key={`${levelIndex}-${levelStartNonce}`} ref={game3dRef} touchState={touchState} catCount={LEVELS[levelIndex].cats} captureRadius={2} onPlayerPositionChange={setPlayerPosition3D} onNearestCatChange={(id, distance, inRange) => { setNearestCatId(id); setNearestCatDistance(distance); setIsCatInCaptureRange(inRange); }} />
       <div className="level-world-backdrop" aria-hidden="true"><div className="floating-clouds"/><div className="sparkle-particles"/></div>
       <header className="integrated-hud">
         <div className="hud-world">
