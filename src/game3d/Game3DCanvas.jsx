@@ -8,7 +8,7 @@ import CatEntity3D from './CatEntity3D';
 
 function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, captureRadius = 2, nearestCatIdRef, nearestInRangeRef, catCount = 8, captureStateRef }) {
   const characterRef = useRef();
-  const cameraStateRef = useRef({ yaw: 0, pitch: 0.18, distance: 6.2 });
+  const cameraStateRef = useRef({ yaw: 0, pitch: 0.18, distance: 6.8, height: 3.2, smoothing: 0.14 });
   const [animState, setAnimState] = useState('idle');
   const cats = useMemo(() => Array.from({ length: catCount }, (_, i) => {
     const angle = (i / catCount) * Math.PI * 2 + Math.random() * 0.25;
@@ -20,7 +20,7 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
     const joy = touchState.current.joy;
     const look = touchState.current.look;
     cameraStateRef.current.yaw -= look.dx * 0.0075;
-    cameraStateRef.current.pitch = THREE.MathUtils.clamp(cameraStateRef.current.pitch - look.dy * 0.0055, -0.35, 0.65);
+    cameraStateRef.current.pitch = THREE.MathUtils.clamp(cameraStateRef.current.pitch - look.dy * 0.0055, -0.35, 0.75);
     look.dx = 0; look.dy = 0;
     if (!characterRef.current) return;
     const strafeInput = THREE.MathUtils.clamp(joy.x, -1, 1);
@@ -28,11 +28,9 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
     const magnitude = Math.hypot(strafeInput, forwardInput);
     const deadzone = 0.1;
     const speed = magnitude < deadzone ? 0 : magnitude;
-    const cameraForward = new THREE.Vector3();
-    state.camera.getWorldDirection(cameraForward);
-    cameraForward.y = 0;
-    cameraForward.normalize();
-    const cameraRight = new THREE.Vector3().crossVectors(cameraForward, new THREE.Vector3(0, 1, 0)).normalize();
+    const yaw = cameraStateRef.current.yaw;
+    const cameraForward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).normalize();
+    const cameraRight = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)).normalize();
     const inputDir = new THREE.Vector3()
       .addScaledVector(cameraForward, speed ? forwardInput / Math.max(1, magnitude) : 0)
       .addScaledVector(cameraRight, speed ? strafeInput / Math.max(1, magnitude) : 0);
@@ -77,6 +75,8 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
 }
 
 const Game3DCanvas = forwardRef(function Game3DCanvas({ touchState, onPlayerPositionChange, onNearestCatChange, captureRadius, catCount = 8 }, ref) {
+  const cameraInputRef = useRef(null);
+  const activeLookPointerIdRef = useRef(null);
   const nearestCatIdRef = useRef(null);
   const nearestInRangeRef = useRef(false);
   const captureStateRef = useRef({ player: { x: 0, y: 0, z: 0 }, nearestCatId: null, nearestDistance: Infinity, inRange: false, capturedIds: new Set() });
@@ -85,6 +85,46 @@ const Game3DCanvas = forwardRef(function Game3DCanvas({ touchState, onPlayerPosi
     nearestInRangeRef.current = isInRange;
     onNearestCatChange?.(id, distance, isInRange);
   };
+  const isRightSideTouch = (event) => {
+    if (event.pointerType !== 'touch') return true;
+    const w = window.innerWidth || 1;
+    return event.clientX >= w * 0.42;
+  };
+
+  const onLookPointerDown = (event) => {
+    if (!isRightSideTouch(event)) return;
+    event.preventDefault();
+    cameraInputRef.current?.setPointerCapture?.(event.pointerId);
+    activeLookPointerIdRef.current = event.pointerId;
+    const look = touchState.current.look;
+    look.active = true;
+    look.pointerId = event.pointerId;
+    look.lastX = event.clientX;
+    look.lastY = event.clientY;
+  };
+
+  const onLookPointerMove = (event) => {
+    if (activeLookPointerIdRef.current !== event.pointerId) return;
+    event.preventDefault();
+    const look = touchState.current.look;
+    look.dx += event.clientX - look.lastX;
+    look.dy += event.clientY - look.lastY;
+    look.lastX = event.clientX;
+    look.lastY = event.clientY;
+  };
+
+  const onLookPointerUp = (event) => {
+    if (activeLookPointerIdRef.current !== event.pointerId) return;
+    event.preventDefault();
+    cameraInputRef.current?.releasePointerCapture?.(event.pointerId);
+    activeLookPointerIdRef.current = null;
+    const look = touchState.current.look;
+    look.active = false;
+    look.pointerId = null;
+    look.dx = 0;
+    look.dy = 0;
+  };
+
   useImperativeHandle(ref, () => ({
     getNearestCat: () => ({ id: captureStateRef.current.nearestCatId, distance: captureStateRef.current.nearestDistance, isInRange: captureStateRef.current.inRange }),
     triggerCatchAnimation: () => true,
@@ -97,10 +137,18 @@ const Game3DCanvas = forwardRef(function Game3DCanvas({ touchState, onPlayerPosi
       return { success: true, catId: nearestId, distance: captureStateRef.current.nearestDistance };
     }
   }), []);
-  return <div style={{ position:'fixed', inset:0, zIndex:2 }}>
+  return <div style={{ position:'fixed', inset:0, zIndex:2, touchAction:'none', userSelect:'none', overscrollBehavior:'none' }}>
     <Canvas shadows dpr={[1,1.5]}>
       <SceneRuntime touchState={touchState} onPlayerPositionChange={onPlayerPositionChange} onNearestCatChange={handleNearestCatChange} captureRadius={captureRadius} nearestCatIdRef={nearestCatIdRef} nearestInRangeRef={nearestInRangeRef} catCount={catCount} captureStateRef={captureStateRef} />
     </Canvas>
+    <div
+      ref={cameraInputRef}
+      onPointerDown={onLookPointerDown}
+      onPointerMove={onLookPointerMove}
+      onPointerUp={onLookPointerUp}
+      onPointerCancel={onLookPointerUp}
+      style={{ position: 'absolute', inset: 0, zIndex: 4, touchAction: 'none' }}
+    />
   </div>;
 });
 
