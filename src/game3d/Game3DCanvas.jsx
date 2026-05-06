@@ -45,7 +45,7 @@ function SceneRuntime({ touchState, onPlayerPositionChange, onNearestCatChange, 
     let nearest = null;
     let nearestDist = Infinity;
     for (const cat of cats) {
-      const d = Math.hypot(cat.x - p.x, cat.z - p.z);
+      const d = Math.hypot(cat.x - p.x, 0.68 - p.y, cat.z - p.z);
       if (d < nearestDist) {
         nearestDist = d;
         nearest = cat;

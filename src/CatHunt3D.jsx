@@ -283,24 +283,30 @@ export default function CatHunt3D() {
   useEffect(() => { if (screen === 'playing' && found >= LEVELS[levelIndex].cats) { if (timeLeft > 30) unlockAchievement('fast', 'Rescatista veloz'); const total = score + timeLeft * 10; setScore(total); setBestScore((b) => Math.max(b, total)); setCompletedLevels((c) => [...new Set([...c, levelIndex])]); const next = Math.min(levelIndex + 1, LEVELS.length - 1); setMaxUnlockedLevel((m) => Math.max(m, next)); pendingLevelRef.current = null; stopGame(); playSfx('levelComplete'); setScreen(levelIndex === LEVELS.length - 1 ? 'complete' : 'levelComplete'); if (levelIndex === LEVELS.length - 1) unlockAchievement('legend', 'Leyenda estrellada'); } }, [found, levelIndex, score, screen, stopGame, timeLeft, playSfx]);
 
 
-  const handle3DCapture = useCallback((catId) => {
-    if (capturedCatIds3D.includes(catId)) return false;
-    setCapturedCatIds3D((prev) => [...prev, catId]);
+  const handle3DCatCaptured = useCallback((catId) => {
+    let capturedNow = false;
+    setCapturedCatIds3D((prev) => {
+      if (prev.includes(catId)) return prev;
+      capturedNow = true;
+      return [...prev, catId];
+    });
+    if (!capturedNow) return false;
+    game3dRef.current?.triggerCatchAnimation?.(catId);
     setFound((f) => f + 1);
     setScore((sc) => sc + 120);
     setHint('¡Michi rescatado!');
     playSfx('meowCatch');
     playSfx('sparkle');
     return true;
-  }, [capturedCatIds3D, playSfx]);
+  }, [playSfx]);
 
   const handleCatchAction = useCallback(() => {
     playSfx('tap');
     const result = game3dRef.current?.attemptCatch?.();
     if (!result) { gameRef.current?.tryCatchCat?.(); return; }
-    if (result.success) { handle3DCapture(result.catId); return; }
+    if (result.success) { handle3DCatCaptured(result.catId); return; }
     if (result.reason === 'too_far' || result.reason === 'no_cat') setHint('Acércate un poquito más');
-  }, [handle3DCapture, playSfx]);
+  }, [handle3DCatCaptured, playSfx]);
   const startLevel = async (idx, reset = false) => {
     await initAudio();
     const targetIndex = reset ? 0 : idx;
