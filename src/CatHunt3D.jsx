@@ -130,7 +130,7 @@ export default function CatHunt3D() {
   const [paused, setPaused] = useState(false);
   const [lastFoundProfiles, setLastFoundProfiles] = useState([]);
   const [settings, setSettings] = useState(() => safeRead('settings', { look: 'media', quality: 'normal' }));
-  const mountRef = useRef(null); const gameRef = useRef(null); const timerRef = useRef(null); const pendingLevelRef = useRef(null);
+  const mountRef = useRef(null); const gameRef = useRef(null); const game3dRef = useRef(null); const timerRef = useRef(null); const pendingLevelRef = useRef(null);
   const touchState = useRef({ joy: { active: false, pointerId: null, x: 0, y: 0 }, look: { active: false, pointerId: null, lastX: 0, lastY: 0, dx: 0, dy: 0 } });
   const audioRef = useRef({ started: false, sounds: {} });
   const isMobile = useMemo(() => /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent), []);
@@ -280,6 +280,22 @@ export default function CatHunt3D() {
   useEffect(() => { if (timeLeft === 0 && screen === 'playing') { pendingLevelRef.current = null; setScreen('gameover'); stopGame(); } }, [timeLeft, screen, stopGame]);
   useEffect(() => { if (screen === 'playing' && found >= LEVELS[levelIndex].cats) { if (timeLeft > 30) unlockAchievement('fast', 'Rescatista veloz'); const total = score + timeLeft * 10; setScore(total); setBestScore((b) => Math.max(b, total)); setCompletedLevels((c) => [...new Set([...c, levelIndex])]); const next = Math.min(levelIndex + 1, LEVELS.length - 1); setMaxUnlockedLevel((m) => Math.max(m, next)); pendingLevelRef.current = null; stopGame(); playSfx('levelComplete'); setScreen(levelIndex === LEVELS.length - 1 ? 'complete' : 'levelComplete'); if (levelIndex === LEVELS.length - 1) unlockAchievement('legend', 'Leyenda estrellada'); } }, [found, levelIndex, score, screen, stopGame, timeLeft, playSfx]);
 
+
+  const handle3DCapture = useCallback((catId) => {
+    setFound((f) => f + 1);
+    setScore((sc) => sc + 120);
+    setHint('¡Michi rescatado!');
+    playSfx('meowCatch');
+    playSfx('sparkle');
+  }, [playSfx]);
+
+  const handleCatchAction = useCallback(() => {
+    playSfx('tap');
+    const caught3D = game3dRef.current?.attemptCatch?.();
+    if (caught3D) return;
+    setHint('Acércate un poquito más');
+    if (!game3dRef.current) gameRef.current?.tryCatchCat?.();
+  }, [playSfx]);
   const startLevel = async (idx, reset = false) => {
     await initAudio();
     const targetIndex = reset ? 0 : idx;
@@ -304,7 +320,7 @@ export default function CatHunt3D() {
 
     {screen === 'playing' && <>
       <div ref={mountRef} style={{ position: 'fixed', inset: 0, opacity: 0, pointerEvents: 'none' }} />
-      <Game3DCanvas touchState={touchState} captureRadius={2} onPlayerPositionChange={setPlayerPosition3D} onNearestCatChange={(id, distance, inRange) => { setNearestCatId(id); setNearestCatDistance(distance); setIsCatInCaptureRange(inRange); }} />
+      <Game3DCanvas ref={game3dRef} touchState={touchState} catCount={LEVELS[levelIndex].cats} captureRadius={2} onCatCaptured={handle3DCapture} onPlayerPositionChange={setPlayerPosition3D} onNearestCatChange={(id, distance, inRange) => { setNearestCatId(id); setNearestCatDistance(distance); setIsCatInCaptureRange(inRange); }} />
       <div className="level-world-backdrop" aria-hidden="true"><div className="floating-clouds"/><div className="sparkle-particles"/></div>
       <header className="integrated-hud">
         <div className="hud-world">
@@ -322,8 +338,8 @@ export default function CatHunt3D() {
           <button className="hud-icon-btn" aria-label="Volver al menú" onClick={() => { setScreen('menu'); stopGame(); }}>🏠</button>
         </div>
       </header>
-      {isMobile && <MobileControls touchState={touchState} isCatInCaptureRange={isCatInCaptureRange} onCatch={() => gameRef.current?.tryCatchCat?.()} />}
-      {!isMobile && <button className={`catch-btn ${isCatInCaptureRange ? 'catch-btn-ready' : ''}`} onClick={() => { playSfx('tap'); gameRef.current?.tryCatchCat?.(); }} style={{ position: 'fixed', right: 14, bottom: 14, zIndex: 25 }}>🐾 Atrapar gatito</button>}
+      {isMobile && <MobileControls touchState={touchState} isCatInCaptureRange={isCatInCaptureRange} onCatch={handleCatchAction} />}
+      {!isMobile && <button className={`catch-btn ${isCatInCaptureRange ? 'catch-btn-ready' : ''}`} onClick={handleCatchAction} style={{ position: 'fixed', right: 14, bottom: 14, zIndex: 25 }}>🐾 Atrapar gatito</button>}
       <div style={{ position: 'fixed', bottom: 16, left: 0, right: 0, textAlign: 'center', color: '#fff', fontWeight: 700, textShadow: '0 2px 6px #000' }}>{hint}</div>
       {rescueToast && <div style={{ position: 'fixed', top: '18%', left: '50%', transform: 'translateX(-50%)', zIndex: 22, background: 'rgba(255,105,173,.88)', color: '#fff', padding: '8px 12px', borderRadius: 999, pointerEvents: 'none', animation: 'fadeToast 1.4s ease forwards' }}>{rescueToast}</div>}
       {paused && <Panel title='Juego en pausa'><button onClick={() => setPaused(false)}>Continuar</button><button onClick={() => startLevel(levelIndex)}>Reiniciar nivel</button><button onClick={() => { setScreen('menu'); stopGame(); }}>Menú</button></Panel>}
