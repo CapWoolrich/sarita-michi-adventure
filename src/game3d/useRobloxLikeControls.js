@@ -107,11 +107,13 @@ export default function useRobloxLikeControls({ characterRef, touchState, isPaus
     }
 
 
-    const jumpState = player.userData.jumpState || { jumpOffset: 0, verticalVelocity: 0, grounded: true };
-    if (!isPaused && !isLevelComplete && jumpRequestedRef?.current && jumpState.grounded) {
+    const jumpState = player.userData.jumpState || { jumpOffset: 0, verticalVelocity: 0, grounded: true, isJumping: false };
+    const jumpRequested = Boolean(jumpRequestedRef?.current);
+    if (!isPaused && !isLevelComplete && jumpRequested && jumpState.grounded && !jumpState.isJumping) {
       jumpState.verticalVelocity = 5.2;
       jumpState.grounded = false;
-      jumpRequestedRef.current = false;
+      jumpState.isJumping = true;
+      if (jumpRequestedRef) jumpRequestedRef.current = false;
     }
     if (!jumpState.grounded) {
       jumpState.verticalVelocity -= 13 * delta;
@@ -120,9 +122,14 @@ export default function useRobloxLikeControls({ characterRef, touchState, isPaus
         jumpState.jumpOffset = 0;
         jumpState.verticalVelocity = 0;
         jumpState.grounded = true;
+        jumpState.isJumping = false;
       }
+    } else {
+      jumpState.jumpOffset = 0;
+      jumpState.verticalVelocity = 0;
+      jumpState.isJumping = false;
     }
-    player.position.y = jumpState.jumpOffset;
+    player.position.y = Math.max(0, jumpState.jumpOffset);
     player.userData.jumpState = jumpState;
 
     const pitch = cameraPitchRef.current;
@@ -149,7 +156,9 @@ export default function useRobloxLikeControls({ characterRef, touchState, isPaus
       cameraApplyCount: cameraApplyCountRef.current,
       playerPosition: { x: player.position.x, y: player.position.y, z: player.position.z },
       playerRotation: player.rotation.y,
-      isJumping: !jumpState.grounded
+      grounded: jumpState.grounded,
+      isJumping: jumpState.isJumping,
+      verticalVelocity: jumpState.verticalVelocity
     });
   });
 
