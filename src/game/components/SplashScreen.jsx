@@ -148,7 +148,7 @@ function SplashScene() {
   );
 }
 
-export default function SplashScreen({ onStart, onContinue, onCollection, onHowToPlay, onCredits, onAchievements, hasProgress = false }) {
+export default function SplashScreen({ onStart, onContinue, onWorlds, onCollection, onHowToPlay, onCredits, onAchievements, hasProgress = false }) {
   return (
     <div className="kw-splash" data-game-ui="true">
       <div className="kw-splash-canvas">
@@ -177,6 +177,9 @@ export default function SplashScreen({ onStart, onContinue, onCollection, onHowT
                 <span aria-hidden>📖</span> Continuar
               </button>
             )}
+            <button className="kw-splash-btn" onClick={onWorlds}>
+              <span aria-hidden>🗺️</span> Mapa de Mundos
+            </button>
             <button className="kw-splash-btn" onClick={onCollection}>
               <span aria-hidden>🧺</span> Colección
             </button>
