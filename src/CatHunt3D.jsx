@@ -21,6 +21,8 @@ import LoadingScreen from './game/components/LoadingScreen';
 import DifficultySelector from './game/components/DifficultySelector';
 import DailyChallengeBadge from './game/components/DailyChallengeBadge';
 import ShareProgressModal from './game/components/ShareProgressModal';
+import VictoryScreen from './game/components/VictoryScreen';
+import { loadEndlessState, saveEndlessState, getEndlessLevel } from './game/endlessMode';
 import { DIFFICULTY_ENEMY_COUNT } from './game/health/healthSystem';
 import { isChallengeCompletedToday, markChallengeCompleted } from './game/dailyChallenge';
 import { startBiomeAudio, muteBiomeAudio, unmuteBiomeAudio, playCaptureChime } from './game/audio/BiomeAudio.js';
@@ -47,6 +49,8 @@ export default function CatHunt3D() {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [allWorldsCompleted, setAllWorldsCompleted] = useState(false);
   const invulnUntilRef = useRef(0);
+  const [isVictoryOpen, setIsVictoryOpen] = useState(false);
+  const [endlessState, setEndlessState] = useState(() => loadEndlessState());
   const [isTransitionOpen, setIsTransitionOpen] = useState(false);
   const game3dRef = useRef(null);
   const touchState = useRef({
@@ -107,7 +111,11 @@ export default function CatHunt3D() {
     if (screen === 'game') {
       setIsLoadingScreen(true);
     } else {
+      // Cleanup completo al salir al splash
       setIsLoadingScreen(false);
+      setIsTransitionOpen(false);
+      setIsPauseMenuOpen(false);
+      setIsVictoryOpen(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen, runtime.worldId]);
@@ -131,6 +139,24 @@ export default function CatHunt3D() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoadingScreen]);
 
+  const onUpgradeDifficulty = useCallback((newDiff) => {
+    runtime.setDifficulty?.(newDiff);
+    setSettings((s) => ({ ...s, difficulty: newDiff }));
+    setIsVictoryOpen(false);
+    setIsTransitionOpen(false);
+    runtime.startLevel?.('world-1', 'nivel-1');
+  }, [runtime]);
+
+  const onStartEndless = useCallback(() => {
+    const next = getEndlessLevel(0);
+    const newState = { active: true, level: 0, bestLevel: Math.max(endlessState.bestLevel, 0) };
+    setEndlessState(newState);
+    saveEndlessState(newState);
+    setIsVictoryOpen(false);
+    setIsTransitionOpen(false);
+    runtime.startLevel?.(next.world.id, next.world.levels[0].id);
+  }, [endlessState, runtime]);
+
   const onLoadingComplete = useCallback(() => {
     setIsLoadingScreen(false);
     runtime.setIsPaused?.(false);
@@ -142,10 +168,15 @@ export default function CatHunt3D() {
     invulnUntilRef.current = runtime.health?.invulnUntil ?? 0;
   }, [runtime.health?.invulnUntil]);
 
-  // Detectar si completó todos los mundos
+  // Detectar si completó el último mundo principal (world-10) o el secreto (world-11)
   useEffect(() => {
-    if (runtime.worldId === 'world-11' && runtime.isLevelComplete) {
-      setAllWorldsCompleted(true);
+    if (runtime.isLevelComplete && (runtime.worldId === 'world-10' || runtime.worldId === 'world-11')) {
+      // Esperar a que la transición de nivel termine antes de abrir Victory
+      const t = setTimeout(() => {
+        setIsTransitionOpen(false);
+        setIsVictoryOpen(true);
+      }, 3200);
+      return () => clearTimeout(t);
     }
   }, [runtime.worldId, runtime.isLevelComplete]);
 
@@ -216,6 +247,11 @@ export default function CatHunt3D() {
 
   const onTransitionAdvance = () => {
     setIsTransitionOpen(false);
+    // Si fue el último mundo, NO avanzar: dejar que VictoryScreen tome el control
+    if (runtime.worldId === 'world-10' || runtime.worldId === 'world-11') {
+      setIsVictoryOpen(true);
+      return;
+    }
     runtime.goToNextLevel?.();
   };
 
@@ -323,7 +359,7 @@ export default function CatHunt3D() {
         speedMode={runtime.speedMode}
         levelIndex={0}
         worldTheme={runtime.worldConfig.theme}
-        mapRadius={56}
+        mapRadius={110}
         lowQuality={settings.graphicsQuality === 'low'}
         enemyCount={DIFFICULTY_ENEMY_COUNT[runtime.difficulty] ?? 1}
         onEnemyHit={() => { runtime.takeDamage?.(); haptic.fail(); }}
@@ -434,6 +470,22 @@ export default function CatHunt3D() {
         settings={settings}
         achievements={achievementsState}
         onClose={() => setIsShareOpen(false)}
+      />
+
+      <VictoryScreen
+        isOpen={isVictoryOpen}
+        totalScore={Object.values(settings?.highScores ?? {}).reduce((s, v) => s + (v ?? 0), 0)}
+        totalCats={achievementsState?.totalCaught ?? 0}
+        goldenCats={settings?.goldenCatsCaught ?? 0}
+        achievementsEarned={Object.keys(achievementsState?.unlocked ?? {}).length}
+        currentDifficulty={runtime.difficulty}
+        onUpgradeDifficulty={onUpgradeDifficulty}
+        onStartEndless={onStartEndless}
+        onHome={() => {
+          setIsVictoryOpen(false);
+          setIsTransitionOpen(false);
+          setScreen('splash');
+        }}
       />
 
       <AchievementToast achievement={achievementToast} />

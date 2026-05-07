@@ -1720,3 +1720,161 @@ body { overflow: hidden; }
 .kw-daily-meta strong { font-size: 14px; color: var(--kw-text); }
 .kw-daily-meta small { font-size: 11px; color: var(--kw-text-soft); }
 .kw-daily-timer { font-size: 10px; color: #8b5fb8; margin-top: 2px; font-weight: 600; }
+
+/* ============================================
+   VICTORY SCREEN — Phase 11
+   ============================================ */
+
+.kw-victory-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: radial-gradient(circle at center, rgba(110, 63, 154, 0.4), rgba(0, 0, 0, 0.85));
+  backdrop-filter: blur(20px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  animation: kw-fade-in 0.5s ease-out;
+  overflow: hidden;
+}
+
+.kw-victory-fireworks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.kw-fw {
+  position: absolute;
+  font-size: 32px;
+  top: calc(20% + (var(--i) * 7%) % 60%);
+  left: calc(10% + (var(--i) * 11%) % 80%);
+  animation: kw-fw-pop 1.6s ease-in-out infinite;
+  animation-delay: var(--delay);
+  filter: drop-shadow(0 0 10px rgba(255, 208, 102, 0.8));
+}
+
+@keyframes kw-fw-pop {
+  0%, 100% { transform: scale(0.6); opacity: 0; }
+  40% { transform: scale(1.4) rotate(20deg); opacity: 1; }
+  80% { transform: scale(1) rotate(0deg); opacity: 0.7; }
+}
+
+.kw-victory-card {
+  position: relative;
+  z-index: 2;
+  width: min(560px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 32px;
+  background: linear-gradient(180deg, rgba(255, 250, 252, 0.96), rgba(248, 240, 250, 0.92));
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 40px 100px rgba(192, 132, 252, 0.5);
+  padding: 32px 28px;
+  text-align: center;
+  animation: kw-trans-card-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.kw-victory-trophy {
+  font-size: 96px;
+  margin-bottom: 6px;
+  filter: drop-shadow(0 8px 20px rgba(255, 208, 102, 0.7));
+  animation: kw-bounce-trophy 1.5s ease-in-out infinite;
+}
+
+.kw-victory-title {
+  margin: 0;
+  font-size: clamp(28px, 5vw, 38px);
+  font-weight: 900;
+  font-family: 'Georgia', serif;
+  background: linear-gradient(135deg, #6e3f9a, #ec4899, #ffd066);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  letter-spacing: 0.5px;
+}
+
+.kw-victory-subtitle {
+  margin: 4px 0 18px;
+  color: #5a4880;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.kw-victory-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.kw-victory-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(192, 132, 252, 0.2);
+  box-shadow: 0 4px 12px rgba(192, 132, 252, 0.12);
+}
+
+.kw-victory-stat-icon { font-size: 28px; margin-bottom: 4px; }
+.kw-victory-stat-value { font-size: 22px; font-weight: 900; color: #6e3f9a; line-height: 1; }
+.kw-victory-stat-label { font-size: 11px; color: #8b5fb8; font-weight: 600; margin-top: 2px; letter-spacing: 0.3px; }
+
+.kw-victory-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kw-victory-primary,
+.kw-victory-endless,
+.kw-victory-home {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.12s ease, box-shadow 0.18s ease;
+}
+
+.kw-victory-primary {
+  background: linear-gradient(135deg, #c084fc, #ec4899);
+  color: white;
+  box-shadow: 0 12px 28px rgba(236, 72, 153, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  animation: kw-splash-pulse 2s ease-in-out infinite;
+}
+
+.kw-victory-endless {
+  background: linear-gradient(135deg, #ffd066, #ff8eb8);
+  color: #5a4880;
+  box-shadow: 0 8px 22px rgba(255, 208, 102, 0.35);
+}
+
+.kw-victory-home {
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.7);
+  color: #6e3f9a;
+  font-weight: 700;
+}
+
+.kw-victory-primary:active,
+.kw-victory-endless:active,
+.kw-victory-home:active { transform: scale(0.97); }
+
+.kw-victory-primary span,
+.kw-victory-endless span { display: flex; flex-direction: column; line-height: 1.2; }
+.kw-victory-primary strong,
+.kw-victory-endless strong { font-size: 16px; font-weight: 800; }
+.kw-victory-primary small,
+.kw-victory-endless small { font-size: 11px; opacity: 0.85; margin-top: 2px; }
+
+@media (max-width: 480px) {
+  .kw-victory-stats { grid-template-columns: 1fr 1fr; }
+}
