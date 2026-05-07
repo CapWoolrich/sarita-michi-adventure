@@ -9,6 +9,7 @@ import useRobloxLikeControls from './useRobloxLikeControls';
 import PostFX from './PostFX';
 import SaritaTrail from './SaritaTrail';
 import EnemyEntity from './enemies/EnemyEntity';
+import RemotePlayer from './RemotePlayer';
 import { getEnemyConfig } from './enemies/biomeEnemies';
 
 const DEBUG_INPUT = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugInput') === '1';
@@ -31,7 +32,7 @@ const makeSnapshot = (player, cats, capturedCatIds, livePositions) => {
   return out;
 };
 
-function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPaused, isLevelComplete, onNearestCatChange, onDebugUpdate, speedMode, jumpRequestedRef, levelIndex, playerPositionRef, worldTheme, catLivePositionsRef, capturedFXList, removeFX, mapRadius, enemyConfigs, onEnemyHit, invulnUntilRef }) {
+function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPaused, isLevelComplete, onNearestCatChange, onDebugUpdate, speedMode, jumpRequestedRef, levelIndex, playerPositionRef, worldTheme, catLivePositionsRef, capturedFXList, removeFX, mapRadius, enemyConfigs, onEnemyHit, invulnUntilRef, outfitColor, hatColor, remotePlayers }) {
   const characterRef = useRef();
   useRobloxLikeControls({ characterRef, touchState, isPaused, isLevelComplete, onDebugUpdate, speedMode, jumpRequestedRef });
 
@@ -96,7 +97,19 @@ function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPau
       {capturedFXList.map((fx) => (
         <CaptureFX key={fx.id} position={[fx.x, fx.y, fx.z]} color={fx.color} onComplete={() => removeFX(fx.id)} />
       ))}
-      <CharacterSarita3D characterRef={characterRef} animState="run" />
+      <CharacterSarita3D characterRef={characterRef} animState="run" outfitColor={outfitColor} hatColor={hatColor} />
+      {/* Remote players */}
+      {remotePlayers.map((rp) => (
+        <RemotePlayer
+          key={rp.id}
+          peerId={rp.id}
+          name={rp.name}
+          color={rp.color}
+          outfitColor={rp.outfitColor || rp.color}
+          position={{ x: rp.x ?? 0, z: rp.z ?? 0 }}
+          rotation={rp.ry ?? 0}
+        />
+      ))}
       <SaritaTrail characterRef={characterRef} active={speedMode === 'fast'} />
       {enemyConfigs.map((cfg, i) => (
         <EnemyEntity
@@ -117,7 +130,7 @@ function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPau
 }
 
 export default forwardRef(function Game3DCanvas(
-  { touchState, cats, capturedCatIds, isPaused, isLevelComplete, speedMode, levelIndex, onNearestCatChange, worldTheme, mapRadius = 28, lowQuality = false, enemyCount = 1, onEnemyHit, invulnUntilRef },
+  { touchState, cats, capturedCatIds, isPaused, isLevelComplete, speedMode, levelIndex, onNearestCatChange, worldTheme, mapRadius = 28, lowQuality = false, enemyCount = 1, onEnemyHit, invulnUntilRef, outfitColor, hatColor, remotePlayers = [] },
   ref
 ) {
   const localTouchState = useRef({
@@ -161,6 +174,7 @@ export default forwardRef(function Game3DCanvas(
       requestJump: () => { jumpRequestedRef.current = true; },
       getRadarSnapshot: () => makeSnapshot(playerPositionRef.current, cats, capturedCatIds, catLivePositionsRef.current),
       isGolden: (catId) => cats.find((c) => c.id === catId)?.golden ?? false,
+      getPlayerPosition: () => playerPositionRef.current,
       attemptCatch: () => {
         const { nearestCat, nearestDistance } = captureStateRef.current;
         if (!nearestCat) return { success: false, reason: 'no_cat' };
@@ -209,6 +223,9 @@ export default forwardRef(function Game3DCanvas(
           enemyConfigs={enemyConfigs}
           onEnemyHit={onEnemyHit}
           invulnUntilRef={invulnUntilRef}
+          outfitColor={outfitColor}
+          hatColor={hatColor}
+          remotePlayers={remotePlayers}
         />
         {!DISABLE_FX && !lowQuality && <PostFX />}
       </Canvas>
