@@ -9,6 +9,8 @@ export default function CharacterSarita3D({
   characterRef,
   animState,
   isMoving,
+  outfitColor = null,
+  hatColor = null,
   ...props
 }) {
   const animation = animState === 'run' || animState === 'walk' || isMoving ? 'walk' : 'idle';
@@ -26,6 +28,8 @@ export default function CharacterSarita3D({
           position={[0, CHARACTER_MODEL_Y_OFFSET, 0]}
           rotation={[0, CHARACTER_MODEL_FORWARD_OFFSET, 0]}
           scale={CHARACTER_MODEL_SCALE}
+          outfitColor={outfitColor}
+          hatColor={hatColor}
         />
       </Suspense>
     </group>

@@ -234,7 +234,7 @@ function SplashScene() {
   );
 }
 
-export default function SplashScreen({ onStart, onContinue, onWorlds, onCollection, onHowToPlay, onCredits, onAchievements, onShare, onDifficulty, currentDifficulty = 'medium', hasProgress = false, dailyStreak = 0, goldenCats = 0, highScores = {} }) {
+export default function SplashScreen({ onStart, onContinue, onWorlds, onCollection, onHowToPlay, onCredits, onAchievements, onShare, onDifficulty, onWardrobe, onMultiplayer, currentDifficulty = 'medium', hasProgress = false, dailyStreak = 0, goldenCats = 0, highScores = {} }) {
   const totalScore = Object.values(highScores).reduce((s, v) => s + (v ?? 0), 0);
   return (
     <div className="kw-splash" data-game-ui="true">
@@ -305,8 +305,16 @@ export default function SplashScreen({ onStart, onContinue, onWorlds, onCollecti
             <button className="kw-splash-btn kw-splash-btn-sm" onClick={onDifficulty}>
               <span aria-hidden>{currentDifficulty === 'hard' ? '🔥' : currentDifficulty === 'easy' ? '🌸' : '🌟'}</span> Dificultad
             </button>
+            <button className="kw-splash-btn kw-splash-btn-sm" onClick={onWardrobe}>
+              <span aria-hidden>👗</span> Vestidor
+            </button>
             <button className="kw-splash-btn kw-splash-btn-sm" onClick={onShare}>
               <span aria-hidden>📤</span> Compartir
+            </button>
+          </div>
+          <div className="kw-splash-secondary-row">
+            <button className="kw-splash-btn kw-splash-btn-sm kw-splash-btn-mp" onClick={onMultiplayer}>
+              <span aria-hidden>🎮</span> Multijugador online
             </button>
           </div>
         </div>

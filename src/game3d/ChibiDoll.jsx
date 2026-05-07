@@ -8,6 +8,8 @@ export default function ChibiDoll({
   rotation = [0, 0, 0],
   scale = 1,
   url = '/models/chibi_doll.glb',
+  outfitColor = null,
+  hatColor = null,
   ...props
 }) {
   const group = useRef();
@@ -27,6 +29,35 @@ export default function ChibiDoll({
       }
     });
   }, [scene]);
+
+  // Aplicar tinte de outfit (si está presente) clonando materiales
+  useEffect(() => {
+    if (!outfitColor) return;
+    const target = new THREE.Color(outfitColor);
+    const hatTarget = hatColor ? new THREE.Color(hatColor) : target;
+    scene.traverse((child) => {
+      if (child.isMesh && child.material && child.material.color) {
+        // Heuristic: tintar cualquier mesh que no sea piel/cabello/ojos
+        const name = (child.name || '').toLowerCase();
+        const isHair = name.includes('hair');
+        const isSkin = name.includes('skin') || name.includes('face') || name.includes('head');
+        const isEye = name.includes('eye');
+        if (isHair || isSkin || isEye) return;
+        // Clonar material para no mutar el global
+        if (!child.userData._tintCloned) {
+          child.material = child.material.clone();
+          child.userData._tintCloned = true;
+          child.userData._origColor = child.material.color.clone();
+        }
+        // Aplicar mezcla 60% tinte sobre color original
+        const orig = child.userData._origColor;
+        if (orig) {
+          const blended = orig.clone().lerp(name.includes('hat') || name.includes('cap') ? hatTarget : target, 0.65);
+          child.material.color.copy(blended);
+        }
+      }
+    });
+  }, [scene, outfitColor, hatColor]);
 
   useEffect(() => {
     if (!actions) return;

@@ -22,6 +22,10 @@ import DifficultySelector from './game/components/DifficultySelector';
 import DailyChallengeBadge from './game/components/DailyChallengeBadge';
 import ShareProgressModal from './game/components/ShareProgressModal';
 import VictoryScreen from './game/components/VictoryScreen';
+import Wardrobe from './game/components/Wardrobe';
+import MultiplayerLobby from './game/components/MultiplayerLobby';
+import { resolveActiveOutfit } from './game/outfits/outfits';
+import { PeerSession } from './game/multiplayer/peerSession';
 import { loadEndlessState, saveEndlessState, getEndlessLevel } from './game/endlessMode';
 import { DIFFICULTY_ENEMY_COUNT } from './game/health/healthSystem';
 import { isChallengeCompletedToday, markChallengeCompleted } from './game/dailyChallenge';
@@ -51,6 +55,12 @@ export default function CatHunt3D() {
   const invulnUntilRef = useRef(0);
   const [isVictoryOpen, setIsVictoryOpen] = useState(false);
   const [endlessState, setEndlessState] = useState(() => loadEndlessState());
+  const [isWardrobeOpen, setIsWardrobeOpen] = useState(false);
+  const [isMultiplayerOpen, setIsMultiplayerOpen] = useState(false);
+  const [mpSession, setMpSession] = useState(null);
+  const [mpStatus, setMpStatus] = useState('idle');
+  const [mpRoomCode, setMpRoomCode] = useState(null);
+  const [remotePlayers, setRemotePlayers] = useState([]);
   const [isTransitionOpen, setIsTransitionOpen] = useState(false);
   const game3dRef = useRef(null);
   const touchState = useRef({
@@ -59,7 +69,39 @@ export default function CatHunt3D() {
     look: { dx: 0, dy: 0 }
   });
 
+  const activeOutfit = useMemo(
+    () => resolveActiveOutfit(settings, runtime.worldConfig.theme, achievementsState),
+    [settings, runtime.worldConfig.theme, achievementsState]
+  );
+
   const visibleCats = useMemo(() => runtime.cats.filter((c) => !runtime.capturedCatIds.includes(c.id)).length, [runtime.cats, runtime.capturedCatIds]);
+
+  // Multiplayer: enviar posición cada 100ms
+  useEffect(() => {
+    if (!mpSession || screen !== 'game') return;
+    const id = setInterval(() => {
+      const pos = game3dRef.current?.getPlayerPosition?.();
+      if (pos) {
+        mpSession.sendPosition(pos.x, pos.z, 0, runtime.speedMode === 'fast' ? 'run' : 'idle');
+      }
+    }, 100);
+    return () => clearInterval(id);
+  }, [mpSession, screen, runtime.speedMode]);
+
+  // Multiplayer: refrescar lista de remote players
+  useEffect(() => {
+    if (!mpSession) { setRemotePlayers([]); return; }
+    const id = setInterval(() => {
+      setRemotePlayers(mpSession.getRemotePlayers());
+    }, 100);
+    return () => clearInterval(id);
+  }, [mpSession]);
+
+  // Cleanup peer al desmontar
+  useEffect(() => {
+    return () => { mpSession?.destroy?.(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Aplicar settings al cargar
   useEffect(() => {
@@ -275,6 +317,8 @@ export default function CatHunt3D() {
           onAchievements={() => setIsAchievementsOpen(true)}
           onShare={() => setIsShareOpen(true)}
           onDifficulty={() => setIsDifficultyOpen(true)}
+          onWardrobe={() => setIsWardrobeOpen(true)}
+          onMultiplayer={() => setIsMultiplayerOpen(true)}
           currentDifficulty={runtime.difficulty}
           dailyStreak={settings.dailyStreak?.count ?? 0}
           goldenCats={settings.goldenCatsCaught ?? 0}
@@ -305,6 +349,48 @@ export default function CatHunt3D() {
           isOpen={isAchievementsOpen}
           achievements={achievementsState}
           onClose={() => setIsAchievementsOpen(false)}
+        />
+        <Wardrobe
+          isOpen={isWardrobeOpen}
+          currentOutfitId={settings.outfitOverride ?? 'auto'}
+          achievements={achievementsState}
+          totalCats={achievementsState?.totalCaught ?? 0}
+          onSelect={(id) => {
+            setSettings((s) => ({ ...s, outfitOverride: id }));
+            setIsWardrobeOpen(false);
+          }}
+          onClose={() => setIsWardrobeOpen(false)}
+        />
+        <MultiplayerLobby
+          isOpen={isMultiplayerOpen}
+          status={mpStatus}
+          roomCode={mpRoomCode}
+          playersCount={remotePlayers.length}
+          onCreateRoom={async () => {
+            const sess = new PeerSession({
+              onPlayerJoin: (id) => showFeedback(`👋 Jugador conectado`),
+              onPlayerLeave: () => showFeedback('👋 Jugador desconectado'),
+              onMessage: () => {},
+              onStatus: setMpStatus
+            });
+            const { roomCode } = await sess.createRoom();
+            setMpSession(sess);
+            setMpRoomCode(roomCode);
+            sess.sendHello({ name: 'Sarita', color: activeOutfit?.hatColor, outfitId: settings.outfitOverride ?? 'auto' });
+          }}
+          onJoinRoom={async (code) => {
+            const sess = new PeerSession({
+              onPlayerJoin: () => showFeedback(`✨ Conectado al host`),
+              onPlayerLeave: () => showFeedback('Host desconectado'),
+              onMessage: () => {},
+              onStatus: setMpStatus
+            });
+            await sess.joinRoom(code);
+            setMpSession(sess);
+            setMpRoomCode(code);
+            sess.sendHello({ name: 'Sarita', color: activeOutfit?.hatColor, outfitId: settings.outfitOverride ?? 'auto' });
+          }}
+          onClose={() => setIsMultiplayerOpen(false)}
         />
         <DifficultySelector
           isOpen={isDifficultyOpen}
@@ -361,6 +447,9 @@ export default function CatHunt3D() {
         worldTheme={runtime.worldConfig.theme}
         mapRadius={110}
         lowQuality={settings.graphicsQuality === 'low'}
+        outfitColor={activeOutfit?.dressColor}
+        hatColor={activeOutfit?.hatColor}
+        remotePlayers={remotePlayers}
         enemyCount={DIFFICULTY_ENEMY_COUNT[runtime.difficulty] ?? 1}
         onEnemyHit={() => { runtime.takeDamage?.(); haptic.fail(); }}
         invulnUntilRef={invulnUntilRef}
