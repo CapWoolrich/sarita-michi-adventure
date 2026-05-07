@@ -1,5 +1,6 @@
 import { useFrame } from '@react-three/fiber';
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { playEnemyAlert } from '../../game/audio/BiomeAudio';
 import * as THREE from 'three';
 
 function useToon() {
@@ -355,8 +356,10 @@ export default function EnemyEntity({
   invulnUntilRef
 }) {
   const groupRef = useRef();
+  const breathRef = useRef();
   const gradientMap = useToon();
-  const stateRef = useRef({ x: spawn[0], z: spawn[2], target: pickPatrolTarget(spawn, patrolRadius) });
+  const stateRef = useRef({ x: spawn[0], z: spawn[2], target: pickPatrolTarget(spawn, patrolRadius), wasChasing: false, lastAlertAt: 0 });
+  const [alertVisible, setAlertVisible] = useState(false);
 
   useFrame((_, delta) => {
     if (!groupRef.current) return;
@@ -395,10 +398,30 @@ export default function EnemyEntity({
     else if (FLOATING_TYPES.has(type)) yBase = 0.05 + Math.sin(Date.now() * 0.004) * 0.04;
     groupRef.current.position.set(s.x, yBase, s.z);
 
+    // Animación idle: respiración (escala Y leve)
+    if (breathRef.current) {
+      const breathScale = 1 + Math.sin(Date.now() * 0.003) * 0.04;
+      breathRef.current.scale.y = breathScale;
+    }
+
     if (player) {
       const distToPlayer = Math.hypot(player.x - s.x, player.z - s.z);
       const now = Date.now();
       const invulnUntil = invulnUntilRef?.current ?? 0;
+
+      // Detectar inicio de persecución → sonido de alerta + indicador visual
+      const isChasing = distToPlayer < detectionRadius;
+      if (isChasing && !s.wasChasing) {
+        // Empezó a perseguir
+        if (now - s.lastAlertAt > 2000) {
+          playEnemyAlert?.(type).catch?.(() => {});
+          s.lastAlertAt = now;
+          setAlertVisible(true);
+          setTimeout(() => setAlertVisible(false), 1500);
+        }
+      }
+      s.wasChasing = isChasing;
+
       if (distToPlayer < 1.6 && now > invulnUntil) {
         onHit?.(now);
       }
@@ -406,13 +429,50 @@ export default function EnemyEntity({
   });
 
   const Body = BODIES[type] ?? WolfBody;
+  const scale = ENEMY_SCALES[type] ?? 1.5;
   return (
-    <group ref={groupRef} position={spawn}>
-      <Body color={color} gradientMap={gradientMap} />
+    <group ref={groupRef} position={spawn} scale={scale}>
+      <group ref={breathRef}>
+        <Body color={color} gradientMap={gradientMap} />
+      </group>
+      {/* Anillo de detección */}
       <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[detectionRadius - 0.2, detectionRadius, 48]} />
-        <meshBasicMaterial color="#ff3b3b" transparent opacity={0.1} toneMapped={false} />
+        <ringGeometry args={[detectionRadius / scale - 0.2, detectionRadius / scale, 48]} />
+        <meshBasicMaterial color="#ff3b3b" transparent opacity={0.12} toneMapped={false} />
       </mesh>
+      {/* Indicador de alerta — exclamación que aparece al perseguir */}
+      {alertVisible && (
+        <group position={[0, 2.5, 0]}>
+          <mesh>
+            <sphereGeometry args={[0.15, 12, 8]} />
+            <meshBasicMaterial color="#ff3b3b" toneMapped={false} />
+          </mesh>
+          <mesh position={[0, -0.18, 0]}>
+            <coneGeometry args={[0.08, 0.2, 8]} />
+            <meshBasicMaterial color="#ff3b3b" toneMapped={false} />
+          </mesh>
+          <mesh position={[0, -0.4, 0]}>
+            <sphereGeometry args={[0.05, 8, 6]} />
+            <meshBasicMaterial color="#ff3b3b" toneMapped={false} />
+          </mesh>
+        </group>
+      )}
     </group>
   );
 }
+
+const ENEMY_SCALES = {
+  wolf: 1.7,
+  fox: 1.4,
+  crocodile: 1.8,
+  ghost: 1.5,
+  owl: 1.4,
+  shark: 1.8,
+  dragon: 1.9,
+  bat: 1.3,
+  crab: 1.5,
+  yeti: 2.0,
+  alien: 1.6,
+  cyberbot: 1.7,
+  drone: 1.5
+};

@@ -9,8 +9,8 @@ import * as THREE from 'three';
 const MOUNTAIN_PROFILES = {
   'mystic-forest': {
     count: 16,
-    radius: [110, 160],
-    height: [6, 10],
+    radius: [220, 320],
+    height: [9, 15],
     width: 11,
     color: '#5a8a52',
     peakColor: '#a3d39a',
@@ -18,8 +18,8 @@ const MOUNTAIN_PROFILES = {
   },
   'sakura-city': {
     count: 14,
-    radius: [110, 156],
-    height: [5, 9],
+    radius: [220, 312],
+    height: [8, 14],
     width: 10,
     color: '#b88aa0',
     peakColor: '#ffd5e8',
@@ -27,8 +27,8 @@ const MOUNTAIN_PROFILES = {
   },
   'crystal-lake': {
     count: 18,
-    radius: [110, 160],
-    height: [7, 13],
+    radius: [220, 320],
+    height: [10, 20],
     width: 7,
     color: '#7a9bb8',
     peakColor: '#cfe7ff',
@@ -36,8 +36,8 @@ const MOUNTAIN_PROFILES = {
   },
   'mist-grove': {
     count: 12,
-    radius: [110, 160],
-    height: [8, 14],
+    radius: [220, 320],
+    height: [12, 21],
     width: 9,
     color: '#5d6f60',
     peakColor: '#aabaad',
@@ -46,8 +46,8 @@ const MOUNTAIN_PROFILES = {
   },
   'pastel-port': {
     count: 12,
-    radius: [120, 170],
-    height: [4, 7],
+    radius: [240, 340],
+    height: [6, 10],
     width: 12,
     color: '#a89580',
     peakColor: '#fff5e0',
@@ -55,8 +55,8 @@ const MOUNTAIN_PROFILES = {
   },
   'cloud-valley': {
     count: 14,
-    radius: [110, 170],
-    height: [5, 9],
+    radius: [220, 340],
+    height: [8, 14],
     width: 9,
     color: '#a8b5d0',
     peakColor: '#ffffff',
@@ -64,8 +64,8 @@ const MOUNTAIN_PROFILES = {
   },
   'moon-garden': {
     count: 14,
-    radius: [110, 160],
-    height: [7, 12],
+    radius: [220, 320],
+    height: [10, 18],
     width: 9,
     color: '#2a2545',
     peakColor: '#5a5d8d',
@@ -73,8 +73,8 @@ const MOUNTAIN_PROFILES = {
   },
   'cotton-beach': {
     count: 10,
-    radius: [120, 170],
-    height: [3, 5],
+    radius: [240, 340],
+    height: [4, 8],
     width: 14,
     color: '#d8c0a0',
     peakColor: '#fff0d4',
@@ -82,8 +82,8 @@ const MOUNTAIN_PROFILES = {
   },
   'aurora-mountain': {
     count: 16,
-    radius: [100, 156],
-    height: [10, 18],
+    radius: [200, 312],
+    height: [15, 27],
     width: 11,
     color: '#3a4d62',
     peakColor: '#ffffff', // nieve
@@ -92,8 +92,8 @@ const MOUNTAIN_PROFILES = {
   },
   'stellar-village': {
     count: 16,
-    radius: [110, 170],
-    height: [4, 9],
+    radius: [220, 340],
+    height: [6, 14],
     width: 7,
     color: '#3a2e5a',
     peakColor: '#a87fee',
@@ -101,8 +101,8 @@ const MOUNTAIN_PROFILES = {
   },
   'neon-city': {
     count: 14,
-    radius: [120, 170],
-    height: [10, 18],
+    radius: [240, 340],
+    height: [15, 27],
     width: 6,
     color: '#1a1a3a',
     peakColor: '#ff66cc',

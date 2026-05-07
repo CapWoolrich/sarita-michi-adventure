@@ -185,7 +185,7 @@ export default forwardRef(function Game3DCanvas(
           toneMapping: THREE.ACESFilmicToneMapping,
           outputColorSpace: THREE.SRGBColorSpace
         }}
-        camera={{ fov: 55, near: 0.1, far: 480 }}
+        camera={{ fov: 55, near: 0.1, far: 900 }}
         onCreated={({ gl }) => { gl.toneMappingExposure = 1.05; }}
       >
         <SceneRuntime

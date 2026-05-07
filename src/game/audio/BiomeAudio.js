@@ -92,3 +92,38 @@ export async function playCaptureChime() {
   chimeSynth.triggerAttackRelease('C6', '4n', now + 0.3);
   setTimeout(() => chimeSynth.dispose(), 1500);
 }
+
+/**
+ * Sonido de alerta cuando un enemigo te detecta.
+ * Tono distinto por tipo de enemigo.
+ */
+const ALERT_TONES = {
+  wolf: ['G3', 'D3'],
+  fox: ['A3', 'E3'],
+  crocodile: ['C2', 'G2'],
+  ghost: ['F#3', 'C#4', 'F#3'],
+  owl: ['D4', 'A3'],
+  shark: ['B1', 'F2'],
+  dragon: ['G2', 'D2', 'G2'],
+  bat: ['B3', 'F#4'],
+  crab: ['E3', 'B3'],
+  yeti: ['C2', 'F2'],
+  alien: ['G#4', 'D5', 'G#4'],
+  cyberbot: ['C#4', 'G#3'],
+  drone: ['A4', 'E4']
+};
+
+export async function playEnemyAlert(enemyType) {
+  await ensure();
+  if (muted) return;
+  const notes = ALERT_TONES[enemyType] ?? ['G3', 'D3'];
+  const alertSynth = new Tone.PolySynth(Tone.Synth, {
+    envelope: { attack: 0.005, decay: 0.15, sustain: 0.05, release: 0.3 },
+    volume: -10
+  }).connect(reverb);
+  const now = Tone.now();
+  notes.forEach((note, i) => {
+    alertSynth.triggerAttackRelease(note, '16n', now + i * 0.12);
+  });
+  setTimeout(() => alertSynth.dispose(), 1500);
+}
