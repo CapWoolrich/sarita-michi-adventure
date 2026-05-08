@@ -3,5 +3,5 @@ export const MODEL_PATHS = {
   cat: '/models/cat.glb'
 };
 
-export const WORLD_BOUNDS = 42;
+export const WORLD_BOUNDS = 110;
 export const CATCH_DISTANCE = 3.2;

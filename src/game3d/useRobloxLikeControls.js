@@ -100,8 +100,8 @@ export default function useRobloxLikeControls({ characterRef, touchState, isPaus
       const speed = 5.1 * speedMultiplier;
       player.position.x += moveDirection.x * speed * delta;
       player.position.z += moveDirection.z * speed * delta;
-      player.position.x = clamp(player.position.x, -36, 36);
-      player.position.z = clamp(player.position.z, -36, 36);
+      player.position.x = clamp(player.position.x, -110, 110);
+      player.position.z = clamp(player.position.z, -110, 110);
       const targetYaw = Math.atan2(moveDirection.x, moveDirection.z);
       player.rotation.y = lerpAngle(player.rotation.y, targetYaw, 0.18);
     }
