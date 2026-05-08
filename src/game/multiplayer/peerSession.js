@@ -13,7 +13,14 @@
  *  { type: 'hello', name, outfitId, color }
  *  { type: 'world', worldId, levelId }   // host comparte nivel actual
  */
-import { Peer } from 'peerjs';
+// PeerJS se carga dinámicamente para no bloquear la app si falla el CDN
+let PeerCtor = null;
+async function loadPeerJS() {
+  if (PeerCtor) return PeerCtor;
+  const mod = await import('peerjs');
+  PeerCtor = mod.Peer || mod.default?.Peer || mod.default;
+  return PeerCtor;
+}
 
 const PREFIX = 'sarita-';
 
@@ -45,8 +52,9 @@ export class PeerSession {
     this.roomCode = code;
     this.isHost = true;
     this._setStatus('connecting');
+    const PeerClass = await loadPeerJS();
     return new Promise((resolve, reject) => {
-      this.peer = new Peer(PREFIX + code);
+      this.peer = new PeerClass(PREFIX + code);
       this.peer.on('open', (id) => {
         this.localPeerId = id;
         this._setStatus('hosting');
@@ -64,8 +72,9 @@ export class PeerSession {
     this.roomCode = roomCode;
     this.isHost = false;
     this._setStatus('connecting');
+    const PeerClass = await loadPeerJS();
     return new Promise((resolve, reject) => {
-      this.peer = new Peer();
+      this.peer = new PeerClass();
       this.peer.on('open', (id) => {
         this.localPeerId = id;
         const conn = this.peer.connect(PREFIX + roomCode, { reliable: false, serialization: 'json' });
