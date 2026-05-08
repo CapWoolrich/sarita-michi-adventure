@@ -10,6 +10,7 @@ import PostFX from './PostFX';
 import SaritaTrail from './SaritaTrail';
 import EnemyEntity from './enemies/EnemyEntity';
 import RemotePlayer from './RemotePlayer';
+import PowerUps from './PowerUps';
 import { getEnemyConfig } from './enemies/biomeEnemies';
 
 const DEBUG_INPUT = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugInput') === '1';
@@ -32,7 +33,7 @@ const makeSnapshot = (player, cats, capturedCatIds, livePositions) => {
   return out;
 };
 
-function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPaused, isLevelComplete, onNearestCatChange, onDebugUpdate, speedMode, jumpRequestedRef, levelIndex, playerPositionRef, worldTheme, catLivePositionsRef, capturedFXList, removeFX, mapRadius, enemyConfigs, onEnemyHit, invulnUntilRef, outfitColor, hatColor, remotePlayers }) {
+function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPaused, isLevelComplete, onNearestCatChange, onDebugUpdate, speedMode, jumpRequestedRef, levelIndex, playerPositionRef, worldTheme, catLivePositionsRef, capturedFXList, removeFX, mapRadius, enemyConfigs, onEnemyHit, invulnUntilRef, outfitColor, hatColor, remotePlayers, onPowerUpCollect }) {
   const characterRef = useRef();
   useRobloxLikeControls({ characterRef, touchState, isPaused, isLevelComplete, onDebugUpdate, speedMode, jumpRequestedRef });
 
@@ -98,6 +99,7 @@ function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPau
         <CaptureFX key={fx.id} position={[fx.x, fx.y, fx.z]} color={fx.color} onComplete={() => removeFX(fx.id)} />
       ))}
       <CharacterSarita3D characterRef={characterRef} animState="run" outfitColor={outfitColor} hatColor={hatColor} />
+      <PowerUps count={4} worldKey={`${worldTheme}-${levelIndex}`} playerPositionRef={playerPositionRef} onCollect={onPowerUpCollect} />
       {/* Remote players */}
       {remotePlayers.map((rp) => (
         <RemotePlayer
@@ -130,7 +132,7 @@ function SceneRuntime({ touchState, cats, capturedCatIds, captureStateRef, isPau
 }
 
 export default forwardRef(function Game3DCanvas(
-  { touchState, cats, capturedCatIds, isPaused, isLevelComplete, speedMode, levelIndex, onNearestCatChange, worldTheme, mapRadius = 28, lowQuality = false, enemyCount = 1, onEnemyHit, invulnUntilRef, outfitColor, hatColor, remotePlayers = [] },
+  { touchState, cats, capturedCatIds, isPaused, isLevelComplete, speedMode, levelIndex, onNearestCatChange, worldTheme, mapRadius = 28, lowQuality = false, enemyCount = 1, onEnemyHit, invulnUntilRef, outfitColor, hatColor, remotePlayers = [], onPowerUpCollect },
   ref
 ) {
   const localTouchState = useRef({
@@ -226,6 +228,7 @@ export default forwardRef(function Game3DCanvas(
           outfitColor={outfitColor}
           hatColor={hatColor}
           remotePlayers={remotePlayers}
+          onPowerUpCollect={onPowerUpCollect}
         />
         {!DISABLE_FX && !lowQuality && <PostFX />}
       </Canvas>

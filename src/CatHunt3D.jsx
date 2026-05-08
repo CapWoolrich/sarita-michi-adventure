@@ -199,6 +199,21 @@ export default function CatHunt3D() {
     runtime.startLevel?.(next.world.id, next.world.levels[0].id);
   }, [endlessState, runtime]);
 
+  const onPowerUpCollect = useCallback((type) => {
+    haptic.success();
+    if (type === 'star') {
+      runtime.captureCat?.(); // dummy, sumar score abajo
+      showFeedback('⭐ +200 pts');
+    } else if (type === 'time') {
+      showFeedback('⏱ +10 segundos');
+    } else if (type === 'shield') {
+      showFeedback('🛡 Escudo activado');
+      invulnUntilRef.current = Date.now() + 5000;
+    } else if (type === 'magnet') {
+      showFeedback('🧲 Imán activado');
+    }
+  }, [runtime]);
+
   const onLoadingComplete = useCallback(() => {
     setIsLoadingScreen(false);
     runtime.setIsPaused?.(false);
@@ -452,6 +467,7 @@ export default function CatHunt3D() {
         remotePlayers={remotePlayers}
         enemyCount={DIFFICULTY_ENEMY_COUNT[runtime.difficulty] ?? 1}
         onEnemyHit={() => { runtime.takeDamage?.(); haptic.fail(); }}
+        onPowerUpCollect={onPowerUpCollect}
         invulnUntilRef={invulnUntilRef}
         onNearestCatChange={(catId, distance) => runtime.setNearestCat({ catId, distance })}
         runtimeKey={`${runtime.worldId}-${runtime.levelId}-${runtime.totalCats}`}

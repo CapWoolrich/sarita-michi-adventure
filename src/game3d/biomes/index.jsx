@@ -48,13 +48,13 @@ function NatureCloud({ count, rmin, rmax, kinds, jitter, scaleBase, scaleVar, yO
 export function MysticForestBiome() {
   return (
     <>
-      <NatureCloud prefix="t" count={36} rmin={28} rmax={80} kinds={['CommonTree1', 'CommonTree3']} jitter={0.5} scaleBase={1.2} scaleVar={0.18} />
-      <NatureCloud prefix="bt" count={30} rmin={80} rmax={130} kinds={['CommonTree1', 'CommonTree3']} jitter={0.6} scaleBase={1.6} scaleVar={0.22} />
-      <NatureCloud prefix="m" count={30} rmin={10} rmax={70} kinds={['MushroomCommon', 'MushroomLaeti']} jitter={0.7} scaleBase={0.7} scaleVar={0.15} />
-      <NatureCloud prefix="r" count={20} rmin={14} rmax={90} kinds={['RockMedium1', 'RockMedium2', 'PebbleRound']} jitter={0.5} scaleBase={0.9} scaleVar={0.2} />
-      <NatureCloud prefix="f" count={36} rmin={12} rmax={80} kinds={['Fern', 'Plant1', 'BushFlowers']} jitter={0.7} scaleBase={0.8} scaleVar={0.15} />
-      <NatureCloud prefix="fl" count={28} rmin={12} rmax={80} kinds={['Flower3Group', 'Flower4Group']} jitter={0.6} scaleBase={0.8} scaleVar={0.15} />
-      <NatureCloud prefix="g" count={50} rmin={8} rmax={75} kinds={['GrassTall']} jitter={0.8} scaleBase={0.6} scaleVar={0.1} />
+      <NatureCloud prefix="t" count={72} rmin={28} rmax={80} kinds={['CommonTree1', 'CommonTree3']} jitter={0.5} scaleBase={1.2} scaleVar={0.18} />
+      <NatureCloud prefix="bt" count={60} rmin={80} rmax={130} kinds={['CommonTree1', 'CommonTree3']} jitter={0.6} scaleBase={1.6} scaleVar={0.22} />
+      <NatureCloud prefix="m" count={60} rmin={10} rmax={70} kinds={['MushroomCommon', 'MushroomLaeti']} jitter={0.7} scaleBase={0.7} scaleVar={0.15} />
+      <NatureCloud prefix="r" count={40} rmin={14} rmax={90} kinds={['RockMedium1', 'RockMedium2', 'PebbleRound']} jitter={0.5} scaleBase={0.9} scaleVar={0.2} />
+      <NatureCloud prefix="f" count={72} rmin={12} rmax={80} kinds={['Fern', 'Plant1', 'BushFlowers']} jitter={0.7} scaleBase={0.8} scaleVar={0.15} />
+      <NatureCloud prefix="fl" count={56} rmin={12} rmax={80} kinds={['Flower3Group', 'Flower4Group']} jitter={0.6} scaleBase={0.8} scaleVar={0.15} />
+      <NatureCloud prefix="g" count={100} rmin={8} rmax={75} kinds={['GrassTall']} jitter={0.8} scaleBase={0.6} scaleVar={0.1} />
     </>
   );
 }
@@ -71,9 +71,9 @@ export function SakuraCityBiome() {
       {backRing(20).map((p, i) => (
         <SakuraTree key={`b-${i}`} position={p} scale={1.3 + (i % 3) * 0.2} />
       ))}
-      <NatureCloud prefix="bush" count={24} rmin={14} rmax={80} kinds={['BushFlowers']} jitter={0.6} scaleBase={0.9} scaleVar={0.2} />
-      <NatureCloud prefix="fl" count={50} rmin={10} rmax={75} kinds={['Flower3Group', 'Flower4Group']} jitter={0.6} scaleBase={1.0} scaleVar={0.2} />
-      <NatureCloud prefix="rock" count={14} rmin={20} rmax={85} kinds={['PebbleRound', 'RockMedium1']} jitter={0.5} scaleBase={0.7} scaleVar={0.15} />
+      <NatureCloud prefix="bush" count={48} rmin={14} rmax={80} kinds={['BushFlowers']} jitter={0.6} scaleBase={0.9} scaleVar={0.2} />
+      <NatureCloud prefix="fl" count={100} rmin={10} rmax={75} kinds={['Flower3Group', 'Flower4Group']} jitter={0.6} scaleBase={1.0} scaleVar={0.2} />
+      <NatureCloud prefix="rock" count={28} rmin={20} rmax={85} kinds={['PebbleRound', 'RockMedium1']} jitter={0.5} scaleBase={0.7} scaleVar={0.15} />
       {/* Lanternas alineadas en camino central */}
       {Array.from({ length: 16 }).map((_, i) => {
         const side = i % 2 === 0 ? 1 : -1;
@@ -115,10 +115,10 @@ export function CrystalLakeBiome() {
       {backRing(20).map((p, i) => (
         <CrystalSpire key={`b-${i}`} position={p} scale={1.6 + (i % 3) * 0.4} color={i % 2 === 0 ? '#cfe7ff' : '#e0d5ff'} />
       ))}
-      <NatureCloud prefix="bush" count={20} rmin={14} rmax={80} kinds={['BushFlowers']} jitter={0.7} scaleBase={0.8} scaleVar={0.18} />
-      <NatureCloud prefix="rock" count={26} rmin={12} rmax={85} kinds={['RockMedium1', 'RockMedium2', 'PebbleRound']} jitter={0.6} scaleBase={0.9} scaleVar={0.2} />
-      <NatureCloud prefix="fl" count={30} rmin={14} rmax={80} kinds={['Flower3Group', 'Flower4Group']} jitter={0.6} scaleBase={0.9} scaleVar={0.2} />
-      <NatureCloud prefix="g" count={50} rmin={8} rmax={70} kinds={['GrassTall']} jitter={0.8} scaleBase={0.7} scaleVar={0.1} />
+      <NatureCloud prefix="bush" count={40} rmin={14} rmax={80} kinds={['BushFlowers']} jitter={0.7} scaleBase={0.8} scaleVar={0.18} />
+      <NatureCloud prefix="rock" count={52} rmin={12} rmax={85} kinds={['RockMedium1', 'RockMedium2', 'PebbleRound']} jitter={0.6} scaleBase={0.9} scaleVar={0.2} />
+      <NatureCloud prefix="fl" count={60} rmin={14} rmax={80} kinds={['Flower3Group', 'Flower4Group']} jitter={0.6} scaleBase={0.9} scaleVar={0.2} />
+      <NatureCloud prefix="g" count={100} rmin={8} rmax={70} kinds={['GrassTall']} jitter={0.8} scaleBase={0.7} scaleVar={0.1} />
     </>
   );
 }
@@ -127,12 +127,12 @@ export function CrystalLakeBiome() {
 export function MistGroveBiome() {
   return (
     <>
-      <NatureCloud prefix="dt" count={36} rmin={20} rmax={80} kinds={['DeadTree1', 'TwistedTree1']} jitter={0.6} scaleBase={1.3} scaleVar={0.2} />
-      <NatureCloud prefix="bdt" count={22} rmin={80} rmax={130} kinds={['DeadTree1', 'TwistedTree1']} jitter={0.7} scaleBase={1.7} scaleVar={0.25} />
-      <NatureCloud prefix="m" count={42} rmin={8} rmax={70} kinds={['MushroomCommon', 'MushroomLaeti']} jitter={0.7} scaleBase={0.9} scaleVar={0.2} />
-      <NatureCloud prefix="rock" count={28} rmin={12} rmax={85} kinds={['RockMedium1', 'RockMedium2', 'PebbleRound']} jitter={0.5} scaleBase={1.0} scaleVar={0.2} />
-      <NatureCloud prefix="fern" count={30} rmin={14} rmax={75} kinds={['Fern', 'Plant1']} jitter={0.7} scaleBase={0.9} scaleVar={0.15} />
-      <NatureCloud prefix="g" count={40} rmin={8} rmax={70} kinds={['GrassTall']} jitter={0.8} scaleBase={0.7} scaleVar={0.1} />
+      <NatureCloud prefix="dt" count={72} rmin={20} rmax={80} kinds={['DeadTree1', 'TwistedTree1']} jitter={0.6} scaleBase={1.3} scaleVar={0.2} />
+      <NatureCloud prefix="bdt" count={44} rmin={80} rmax={130} kinds={['DeadTree1', 'TwistedTree1']} jitter={0.7} scaleBase={1.7} scaleVar={0.25} />
+      <NatureCloud prefix="m" count={84} rmin={8} rmax={70} kinds={['MushroomCommon', 'MushroomLaeti']} jitter={0.7} scaleBase={0.9} scaleVar={0.2} />
+      <NatureCloud prefix="rock" count={56} rmin={12} rmax={85} kinds={['RockMedium1', 'RockMedium2', 'PebbleRound']} jitter={0.5} scaleBase={1.0} scaleVar={0.2} />
+      <NatureCloud prefix="fern" count={60} rmin={14} rmax={75} kinds={['Fern', 'Plant1']} jitter={0.7} scaleBase={0.9} scaleVar={0.15} />
+      <NatureCloud prefix="g" count={80} rmin={8} rmax={70} kinds={['GrassTall']} jitter={0.8} scaleBase={0.7} scaleVar={0.1} />
     </>
   );
 }
@@ -169,9 +169,9 @@ export function PastelPortBiome() {
       <BeachUmbrella position={[12, 0, 16]} color="#ff9bc8" />
       <BeachUmbrella position={[16, 0, 22]} color="#ffd87a" />
       <BeachUmbrella position={[-14, 0, 18]} color="#a8e0ff" />
-      <NatureCloud prefix="bush" count={18} rmin={14} rmax={75} kinds={['BushFlowers']} jitter={0.6} scaleBase={0.8} scaleVar={0.15} />
-      <NatureCloud prefix="rock" count={20} rmin={20} rmax={75} kinds={['RockMedium1', 'PebbleRound']} jitter={0.5} scaleBase={0.8} scaleVar={0.18} />
-      <NatureCloud prefix="g" count={38} rmin={10} rmax={70} kinds={['GrassTall']} jitter={0.7} scaleBase={0.6} scaleVar={0.1} />
+      <NatureCloud prefix="bush" count={36} rmin={14} rmax={75} kinds={['BushFlowers']} jitter={0.6} scaleBase={0.8} scaleVar={0.15} />
+      <NatureCloud prefix="rock" count={40} rmin={20} rmax={75} kinds={['RockMedium1', 'PebbleRound']} jitter={0.5} scaleBase={0.8} scaleVar={0.18} />
+      <NatureCloud prefix="g" count={76} rmin={10} rmax={70} kinds={['GrassTall']} jitter={0.7} scaleBase={0.6} scaleVar={0.1} />
     </>
   );
 }
@@ -194,8 +194,8 @@ export function CloudValleyBiome() {
       ].map((pos, i) => (
         <CottonTree key={`ct-${i}`} position={pos} scale={1.4 + (i % 3) * 0.25} color={['#ffe5e5', '#e5f0ff', '#fff0e5', '#f0e5ff'][i % 4]} />
       ))}
-      <NatureCloud prefix="fl" count={36} rmin={12} rmax={75} kinds={['Flower3Group', 'Flower4Group']} jitter={0.6} scaleBase={1.0} scaleVar={0.2} />
-      <NatureCloud prefix="g" count={50} rmin={8} rmax={70} kinds={['GrassTall']} jitter={0.8} scaleBase={0.7} scaleVar={0.1} />
+      <NatureCloud prefix="fl" count={72} rmin={12} rmax={75} kinds={['Flower3Group', 'Flower4Group']} jitter={0.6} scaleBase={1.0} scaleVar={0.2} />
+      <NatureCloud prefix="g" count={100} rmin={8} rmax={70} kinds={['GrassTall']} jitter={0.8} scaleBase={0.7} scaleVar={0.1} />
     </>
   );
 }
@@ -205,12 +205,12 @@ export function MoonGardenBiome() {
   return (
     <>
       <MoonOrb position={[-16, 22, -55]} scale={1} />
-      <StarField count={200} />
-      <NatureCloud prefix="dt" count={36} rmin={22} rmax={80} kinds={['TwistedTree1', 'DeadTree1']} jitter={0.5} scaleBase={1.3} scaleVar={0.2} />
-      <NatureCloud prefix="bdt" count={20} rmin={80} rmax={130} kinds={['TwistedTree1']} jitter={0.6} scaleBase={1.7} scaleVar={0.25} />
-      <NatureCloud prefix="fl" count={70} rmin={8} rmax={75} kinds={['Flower3Group', 'Flower4Group']} jitter={0.6} scaleBase={1.0} scaleVar={0.2} />
-      <NatureCloud prefix="m" count={30} rmin={10} rmax={70} kinds={['MushroomCommon', 'MushroomLaeti']} jitter={0.7} scaleBase={0.9} scaleVar={0.2} />
-      <NatureCloud prefix="g" count={60} rmin={8} rmax={70} kinds={['GrassTall']} jitter={0.8} scaleBase={0.7} scaleVar={0.1} />
+      <StarField count={400} />
+      <NatureCloud prefix="dt" count={72} rmin={22} rmax={80} kinds={['TwistedTree1', 'DeadTree1']} jitter={0.5} scaleBase={1.3} scaleVar={0.2} />
+      <NatureCloud prefix="bdt" count={40} rmin={80} rmax={130} kinds={['TwistedTree1']} jitter={0.6} scaleBase={1.7} scaleVar={0.25} />
+      <NatureCloud prefix="fl" count={140} rmin={8} rmax={75} kinds={['Flower3Group', 'Flower4Group']} jitter={0.6} scaleBase={1.0} scaleVar={0.2} />
+      <NatureCloud prefix="m" count={60} rmin={10} rmax={70} kinds={['MushroomCommon', 'MushroomLaeti']} jitter={0.7} scaleBase={0.9} scaleVar={0.2} />
+      <NatureCloud prefix="g" count={120} rmin={8} rmax={70} kinds={['GrassTall']} jitter={0.8} scaleBase={0.7} scaleVar={0.1} />
       {ring(14, 14, 60, 0.7).map((p, i) => (
         <Lantern key={`lg-${i}`} position={p} color="#a8c8ff" />
       ))}
@@ -238,8 +238,8 @@ export function CottonBeachBiome() {
       <BeachUmbrella position={[-6, 0, 12]} color="#ffb6e0" />
       <BeachUmbrella position={[16, 0, 10]} color="#c8a8ff" />
       <BeachUmbrella position={[-14, 0, 8]} color="#ffe19b" />
-      <NatureCloud prefix="rock" count={36} rmin={8} rmax={75} kinds={['PebbleRound', 'RockMedium1']} jitter={0.5} scaleBase={0.8} scaleVar={0.15} />
-      <NatureCloud prefix="g" count={40} rmin={8} rmax={70} kinds={['GrassTall']} jitter={0.8} scaleBase={0.7} scaleVar={0.1} />
+      <NatureCloud prefix="rock" count={72} rmin={8} rmax={75} kinds={['PebbleRound', 'RockMedium1']} jitter={0.5} scaleBase={0.8} scaleVar={0.15} />
+      <NatureCloud prefix="g" count={80} rmin={8} rmax={70} kinds={['GrassTall']} jitter={0.8} scaleBase={0.7} scaleVar={0.1} />
       {ring(12, 24, 80).map((p, i) => (
         <FloatingCloud key={`c-${i}`} position={[p[0], 10, p[2]]} scale={1.4 + (i % 3) * 0.4} />
       ))}
@@ -259,12 +259,12 @@ export function AuroraMountainBiome() {
       <AuroraBand position={[0, 14, -42]} />
       <AuroraBand position={[4, 16, -48]} />
       <AuroraBand position={[-6, 15, -40]} />
-      <StarField count={120} />
+      <StarField count={240} />
       {/* Pinos GLB con nieve simulada via Pine_3 */}
-      <NatureCloud prefix="pine" count={36} rmin={20} rmax={80} kinds={['Pine1', 'Pine3']} jitter={0.5} scaleBase={1.3} scaleVar={0.2} />
-      <NatureCloud prefix="bpine" count={26} rmin={80} rmax={130} kinds={['Pine1', 'Pine3']} jitter={0.6} scaleBase={1.8} scaleVar={0.3} />
-      <NatureCloud prefix="rock" count={36} rmin={12} rmax={90} kinds={['RockMedium1', 'RockMedium2']} jitter={0.5} scaleBase={1.0} scaleVar={0.2} />
-      <NatureCloud prefix="g" count={40} rmin={8} rmax={70} kinds={['GrassTall']} jitter={0.8} scaleBase={0.6} scaleVar={0.1} />
+      <NatureCloud prefix="pine" count={72} rmin={20} rmax={80} kinds={['Pine1', 'Pine3']} jitter={0.5} scaleBase={1.3} scaleVar={0.2} />
+      <NatureCloud prefix="bpine" count={52} rmin={80} rmax={130} kinds={['Pine1', 'Pine3']} jitter={0.6} scaleBase={1.8} scaleVar={0.3} />
+      <NatureCloud prefix="rock" count={72} rmin={12} rmax={90} kinds={['RockMedium1', 'RockMedium2']} jitter={0.5} scaleBase={1.0} scaleVar={0.2} />
+      <NatureCloud prefix="g" count={80} rmin={8} rmax={70} kinds={['GrassTall']} jitter={0.8} scaleBase={0.6} scaleVar={0.1} />
     </>
   );
 }
@@ -273,7 +273,7 @@ export function AuroraMountainBiome() {
 export function StellarVillageBiome() {
   return (
     <>
-      <StarField count={280} />
+      <StarField count={560} />
       <mesh position={[42, 26, -68]}>
         <sphereGeometry args={[5, 24, 18]} />
         <meshStandardMaterial color="#c89eff" emissive="#7d4ad6" emissiveIntensity={0.4} roughness={0.7} />
@@ -302,8 +302,8 @@ export function StellarVillageBiome() {
       {ring(28, 12, 75, 0.6).map((p, i) => (
         <Lantern key={`sv-l-${i}`} position={[p[0], 1.5 + (i % 4) * 0.8, p[2]]} color={['#ffd066', '#a8c8ff', '#ffd6a5', '#d4b6ff'][i % 4]} />
       ))}
-      <NatureCloud prefix="rock" count={20} rmin={14} rmax={75} kinds={['PebbleRound']} jitter={0.6} scaleBase={0.8} scaleVar={0.15} />
-      <NatureCloud prefix="g" count={30} rmin={8} rmax={70} kinds={['GrassTall']} jitter={0.8} scaleBase={0.6} scaleVar={0.1} />
+      <NatureCloud prefix="rock" count={40} rmin={14} rmax={75} kinds={['PebbleRound']} jitter={0.6} scaleBase={0.8} scaleVar={0.15} />
+      <NatureCloud prefix="g" count={60} rmin={8} rmax={70} kinds={['GrassTall']} jitter={0.8} scaleBase={0.6} scaleVar={0.1} />
     </>
   );
 }

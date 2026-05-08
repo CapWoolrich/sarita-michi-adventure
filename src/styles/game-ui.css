@@ -494,7 +494,7 @@ body { overflow: hidden; }
 .kw-splash {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 80;
   background: linear-gradient(180deg, #fff5fa 0%, #ffe5f0 60%, #fff0e5 100%);
   overflow: hidden;
   animation: kw-fade-in 0.5s ease-out;
@@ -1886,7 +1886,7 @@ body { overflow: hidden; }
 .kw-splash-v2 {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 80;
   background: linear-gradient(135deg, #fff5fa 0%, #ffe5f0 50%, #fff0e5 100%);
   overflow: hidden;
   animation: kw-fade-in 0.5s ease-out;
