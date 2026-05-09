@@ -14,6 +14,12 @@ const tuneLevel = (level, difficulty) => {
   return { ...level, catCount, timeLimit, objectives: { ...(level?.objectives ?? {}), requiredCats }, modifiers: { ...(level?.modifiers ?? {}) } };
 };
 const initialMission = (level) => ({ activatedBellIds: [], requiredBells: level?.objectives?.requiredBells ?? 0, goldenCatCaptured: false, isGameOver: false, missionMessage: '' });
+const makeBellSet = (worldId, levelId, count = 0) => Array.from({ length: count }, (_, i) => {
+  const base = Array.from(`${worldId}-${levelId}`).reduce((sum, char, idx) => sum + char.charCodeAt(0) * (idx + 11), 0);
+  const angle = (i / Math.max(1, count)) * Math.PI * 2 + (base % 9) * 0.09;
+  const radius = 18 + ((base + i * 23) % 36);
+  return { id: `${worldId}-${levelId}-bell-${i + 1}`, position: [Math.cos(angle) * radius, 1.05, Math.sin(angle) * radius] };
+});
 
 export default function useGameRuntime() {
   const initialProgress = loadProgress();
@@ -39,6 +45,7 @@ export default function useGameRuntime() {
   const totalCats = cats.length;
   const currentLevelIndex = Math.max(0, worldConfig.levels.findIndex((l) => l.id === levelId));
   const isLastLevelInWorld = currentLevelIndex === worldConfig.levels.length - 1;
+  const bells = useMemo(() => levelConfig.missionType === 'exploration' ? makeBellSet(worldId, levelId, levelConfig.objectives?.requiredBells ?? 0) : [], [levelConfig.missionType, levelConfig.objectives?.requiredBells, levelId, worldId]);
 
   const startLevel = useCallback((nextWorldId, nextLevelId) => {
     const nextWorld = getWorldById(nextWorldId) ?? WORLDS[0];
@@ -86,5 +93,5 @@ export default function useGameRuntime() {
   useEffect(() => { if (isPaused || isLevelComplete || missionState.isGameOver) return; const t = setInterval(() => setTimeLeft((v) => (v <= 1 ? 0 : v - 1)), 1000); return () => clearInterval(t); }, [isPaused, isLevelComplete, missionState.isGameOver]);
   useEffect(() => { if (timeLeft === 0 && !isLevelComplete) { setIsPaused(true); setMissionState((s) => ({ ...s, isGameOver: true, missionMessage: 'Se acabó el tiempo' })); } }, [isLevelComplete, timeLeft]);
 
-  return useMemo(() => ({ worlds: WORLDS, progress, worldId, levelId, currentLevelIndex, isLastLevelInWorld, worldConfig, levelConfig, cats, totalCats, capturedCatIds, score, timeLeft, isPaused, isLevelComplete, isGameOver: missionState.isGameOver, nearestCatId, nearestCatDistance, lastCatchResult, speedMode, health, missionState, takeDamage, difficulty, setDifficulty, startLevel, captureCat, completeLevel, restartLevel, goToNextLevel, goToWorld, setNearestCat, setLastCatchResult, activateBell, addScore, addTime, toggleSpeedMode, setIsPaused }), [progress, worldId, levelId, currentLevelIndex, isLastLevelInWorld, worldConfig, levelConfig, cats, totalCats, capturedCatIds, score, timeLeft, isPaused, isLevelComplete, missionState, nearestCatId, nearestCatDistance, lastCatchResult, speedMode, health, takeDamage, difficulty, startLevel, captureCat, completeLevel, restartLevel, goToNextLevel, goToWorld, setNearestCat, activateBell, addScore, addTime, toggleSpeedMode]);
+  return useMemo(() => ({ worlds: WORLDS, progress, worldId, levelId, currentLevelIndex, isLastLevelInWorld, worldConfig, levelConfig, cats, totalCats, capturedCatIds, score, timeLeft, isPaused, isLevelComplete, isGameOver: missionState.isGameOver, nearestCatId, nearestCatDistance, lastCatchResult, speedMode, health, missionState, bells, takeDamage, difficulty, setDifficulty, startLevel, captureCat, completeLevel, restartLevel, goToNextLevel, goToWorld, setNearestCat, setLastCatchResult, activateBell, addScore, addTime, toggleSpeedMode, setIsPaused }), [progress, worldId, levelId, currentLevelIndex, isLastLevelInWorld, worldConfig, levelConfig, cats, totalCats, capturedCatIds, score, timeLeft, isPaused, isLevelComplete, missionState, bells, nearestCatId, nearestCatDistance, lastCatchResult, speedMode, health, takeDamage, difficulty, startLevel, captureCat, completeLevel, restartLevel, goToNextLevel, goToWorld, setNearestCat, activateBell, addScore, addTime, toggleSpeedMode]);
 }
