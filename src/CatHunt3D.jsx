@@ -68,12 +68,34 @@ export default function CatHunt3D() {
   const visibleCats = useMemo(() => runtime.cats.filter((c) => !runtime.capturedCatIds.includes(c.id)).length, [runtime.cats, runtime.capturedCatIds]);
   const missionEnemyBonus = runtime.levelConfig?.modifiers?.enemyBonus ?? 0;
   const radarRange = runtime.levelConfig?.modifiers?.radarRange ?? 30;
+  const missionObjectiveText = useMemo(() => {
+    const level = runtime.levelConfig ?? {};
+    const missionType = level.missionType ?? 'rescue';
+    const requiredCats = level.objectives?.requiredCats ?? level.catCount ?? runtime.totalCats;
+    const requiredBells = level.objectives?.requiredBells ?? 0;
+    if (missionType === 'golden') return 'Encuentra al Michi Dorado';
+    if (missionType === 'time_attack') return `Atrapa ${requiredCats} michis antes de que acabe el tiempo`;
+    if (missionType === 'exploration') return `Activa ${requiredBells} campanitas y rescata ${requiredCats} michis`;
+    if (missionType === 'careful') return `Rescata ${requiredCats} michis sin perder corazones`;
+    if (missionType === 'fog') return `Radar limitado: rescata ${requiredCats} michis`;
+    if (missionType === 'slow_zone') return `Cruza zonas lentas y rescata ${requiredCats} michis`;
+    if (missionType === 'city_hide') return `Busca escondites y rescata ${requiredCats} michis`;
+    if (missionType === 'mountain_jump') return `Usa saltos suaves y rescata ${requiredCats} michis`;
+    if (missionType === 'finale') return `Rescate final: ${requiredCats} michis y Michi Dorado`;
+    return `Atrapa ${requiredCats} michis`;
+  }, [runtime.levelConfig, runtime.totalCats]);
 
   const showFeedback = useCallback((msg) => {
     if (!msg) return;
     setFeedback(msg);
     setTimeout(() => setFeedback(''), 1500);
   }, []);
+
+  useEffect(() => {
+    if (screen !== 'game' || !missionObjectiveText) return;
+    const t = setTimeout(() => showFeedback(missionObjectiveText), 3900);
+    return () => clearTimeout(t);
+  }, [screen, runtime.worldId, runtime.levelId, missionObjectiveText, showFeedback]);
 
   useEffect(() => {
     if (!mpSession || screen !== 'game') return;
@@ -281,7 +303,15 @@ export default function CatHunt3D() {
 
   return (
     <div>
-      <LevelIntroCard worldKey={`${runtime.worldId}-${runtime.levelId}`} worldIndex={runtime.worldConfig.order} worldName={runtime.worldConfig.name} levelName={runtime.levelConfig.id.replace('-', ' ')} totalWorlds={runtime.worlds.length} />
+      <LevelIntroCard
+        worldKey={`${runtime.worldId}-${runtime.levelId}`}
+        worldIndex={runtime.worldConfig.order}
+        worldName={runtime.worldConfig.name}
+        levelName={runtime.levelConfig.id.replace('-', ' ')}
+        totalWorlds={runtime.worlds.length}
+        missionTitle={runtime.levelConfig.missionTitle}
+        objectiveText={missionObjectiveText}
+      />
 
       <MinimalHUD capturedCount={runtime.capturedCatIds.length} totalCats={runtime.totalCats} timeLeft={runtime.timeLeft} isPaused={runtime.isPaused} onPause={() => runtime.setIsPaused((v) => !v)} onHome={() => setScreen('splash')} />
 
