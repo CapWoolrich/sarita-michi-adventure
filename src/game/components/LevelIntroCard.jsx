@@ -1,19 +1,15 @@
 import { useEffect, useState } from 'react';
 
-/**
- * Tarjeta que aparece al inicio de cada nivel mostrando "Mundo X de N · Nombre".
- * Se desvanece a los ~2.5s. Reaparece cuando cambia worldKey.
- */
-export default function LevelIntroCard({ worldIndex, worldName, levelName, totalWorlds = 11, worldKey }) {
+export default function LevelIntroCard({ worldIndex, worldName, levelName, totalWorlds = 11, worldKey, missionTitle, objectiveText }) {
   const [visible, setVisible] = useState(true);
-  const [phase, setPhase] = useState('in'); // in -> hold -> out -> done
+  const [phase, setPhase] = useState('in');
 
   useEffect(() => {
     setVisible(true);
     setPhase('in');
     const t1 = setTimeout(() => setPhase('hold'), 350);
-    const t2 = setTimeout(() => setPhase('out'), 2200);
-    const t3 = setTimeout(() => { setPhase('done'); setVisible(false); }, 2800);
+    const t2 = setTimeout(() => setPhase('out'), 3000);
+    const t3 = setTimeout(() => { setPhase('done'); setVisible(false); }, 3600);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [worldKey]);
 
@@ -25,6 +21,8 @@ export default function LevelIntroCard({ worldIndex, worldName, levelName, total
         <div className="kw-intro-badge">Mundo {worldIndex} de {totalWorlds}</div>
         <div className="kw-intro-name">{worldName}</div>
         <div className="kw-intro-level">{levelName}</div>
+        {missionTitle && <div className="kw-intro-level">{missionTitle}</div>}
+        {objectiveText && <div className="kw-intro-level">{objectiveText}</div>}
       </div>
     </div>
   );
