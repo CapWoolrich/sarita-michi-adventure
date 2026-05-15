@@ -161,15 +161,11 @@ function SplashScene() {
   );
 }
 
-/**
- * Layout grid responsivo: 2 columnas en landscape (canvas a la izquierda, menú a la derecha),
- * 1 columna en portrait (canvas arriba, menú abajo).
- */
 export default function SplashScreen({
   onStart, onContinue, onWorlds, onCollection, onHowToPlay, onCredits, onAchievements,
   onShare, onDifficulty, onWardrobe, onMultiplayer,
   currentDifficulty = 'medium', hasProgress = false,
-  dailyStreak = 0, goldenCats = 0, highScores = {}
+  dailyStreak = 0, goldenCats = 0, highScores = {}, coins = 0, chests = 0
 }) {
   const totalScore = Object.values(highScores).reduce((s, v) => s + (v ?? 0), 0);
   const diffIcon = currentDifficulty === 'hard' ? '🔥' : currentDifficulty === 'easy' ? '🌸' : '🌟';
@@ -190,10 +186,12 @@ export default function SplashScreen({
           </h1>
           <p className="kw-splash-v2-tagline">Caza, rescata y domina mundos llenos de michis</p>
 
-          {(dailyStreak > 0 || goldenCats > 0 || totalScore > 0) && (
+          {(dailyStreak > 0 || goldenCats > 0 || totalScore > 0 || coins > 0 || chests > 0) && (
             <div className="kw-splash-v2-stats">
               {dailyStreak > 0 && (<span className="kw-splash-stat-pill kw-streak"><span aria-hidden>🔥</span> {dailyStreak} {dailyStreak === 1 ? 'día' : 'días'}</span>)}
               {goldenCats > 0 && (<span className="kw-splash-stat-pill kw-golden"><span aria-hidden>✨</span> {goldenCats}</span>)}
+              {coins > 0 && (<span className="kw-splash-stat-pill"><span aria-hidden>🪙</span> {coins}</span>)}
+              {chests > 0 && (<span className="kw-splash-stat-pill"><span aria-hidden>🎁</span> {chests}</span>)}
               {totalScore > 0 && (<span className="kw-splash-stat-pill"><span aria-hidden>⭐</span> {totalScore.toLocaleString()}</span>)}
             </div>
           )}
@@ -211,30 +209,14 @@ export default function SplashScreen({
                 <span aria-hidden>📖</span><span>Continuar</span>
               </button>
             )}
-            <button type="button" className="kw-splash-v2-btn" onClick={() => onWorlds?.()}>
-              <span aria-hidden>🗺️</span><span>Mundos</span>
-            </button>
-            <button type="button" className="kw-splash-v2-btn" onClick={() => onCollection?.()}>
-              <span aria-hidden>🧺</span><span>Colección</span>
-            </button>
-            <button type="button" className="kw-splash-v2-btn" onClick={() => onAchievements?.()}>
-              <span aria-hidden>🏆</span><span>Logros</span>
-            </button>
-            <button type="button" className="kw-splash-v2-btn" onClick={() => onWardrobe?.()}>
-              <span aria-hidden>👗</span><span>Vestidor</span>
-            </button>
-            <button type="button" className="kw-splash-v2-btn" onClick={() => onDifficulty?.()}>
-              <span aria-hidden>{diffIcon}</span><span>Dificultad</span>
-            </button>
-            <button type="button" className="kw-splash-v2-btn" onClick={() => onShare?.()}>
-              <span aria-hidden>📤</span><span>Compartir</span>
-            </button>
-            <button type="button" className="kw-splash-v2-btn" onClick={() => onHowToPlay?.()}>
-              <span aria-hidden>💡</span><span>Cómo jugar</span>
-            </button>
-            <button type="button" className="kw-splash-v2-btn" onClick={() => onCredits?.()}>
-              <span aria-hidden>🎨</span><span>Créditos</span>
-            </button>
+            <button type="button" className="kw-splash-v2-btn" onClick={() => onWorlds?.()}><span aria-hidden>🗺️</span><span>Mundos</span></button>
+            <button type="button" className="kw-splash-v2-btn" onClick={() => onCollection?.()}><span aria-hidden>🧺</span><span>Colección</span></button>
+            <button type="button" className="kw-splash-v2-btn" onClick={() => onAchievements?.()}><span aria-hidden>🏆</span><span>Logros</span></button>
+            <button type="button" className="kw-splash-v2-btn" onClick={() => onWardrobe?.()}><span aria-hidden>👗</span><span>Vestidor</span></button>
+            <button type="button" className="kw-splash-v2-btn" onClick={() => onDifficulty?.()}><span aria-hidden>{diffIcon}</span><span>Dificultad</span></button>
+            <button type="button" className="kw-splash-v2-btn" onClick={() => onShare?.()}><span aria-hidden>📤</span><span>Compartir</span></button>
+            <button type="button" className="kw-splash-v2-btn" onClick={() => onHowToPlay?.()}><span aria-hidden>💡</span><span>Cómo jugar</span></button>
+            <button type="button" className="kw-splash-v2-btn" onClick={() => onCredits?.()}><span aria-hidden>🎨</span><span>Créditos</span></button>
           </div>
 
           <button type="button" className="kw-splash-v2-mp" onClick={() => onMultiplayer?.()}>

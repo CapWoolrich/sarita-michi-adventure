@@ -25,7 +25,8 @@ import VictoryScreen from './game/components/VictoryScreen';
 import Wardrobe from './game/components/Wardrobe';
 import MultiplayerLobby from './game/components/MultiplayerLobby';
 import GameOverPanel from './game/components/GameOverPanel';
-import { resolveActiveOutfit } from './game/outfits/outfits';
+import RewardToast from './game/components/RewardToast';
+import { OUTFITS, getCompletedLevelCount, getUnlockLevel, resolveActiveOutfit } from './game/outfits/outfits';
 import { PeerSession } from './game/multiplayer/peerSession';
 import { loadEndlessState, saveEndlessState, getEndlessLevel } from './game/endlessMode';
 import { DIFFICULTY_ENEMY_COUNT } from './game/health/healthSystem';
@@ -38,6 +39,7 @@ export default function CatHunt3D() {
   const [screen, setScreen] = useState('splash');
   const [mute, setMute] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [rewardToast, setRewardToast] = useState(null);
   const [isWorldPanelOpen, setIsWorldPanelOpen] = useState(false);
   const [isCollectionOpen, setIsCollectionOpen] = useState(false);
   const [isAchievementsOpen, setIsAchievementsOpen] = useState(false);
@@ -65,7 +67,8 @@ export default function CatHunt3D() {
   const game3dRef = useRef(null);
   const touchState = useRef({ joystick: { x: 0, y: 0, magnitude: 0, active: false }, joy: { x: 0, y: 0, magnitude: 0, active: false }, look: { dx: 0, dy: 0 } });
 
-  const activeOutfit = useMemo(() => resolveActiveOutfit(settings, runtime.worldConfig.theme, achievementsState), [settings, runtime.worldConfig.theme, achievementsState]);
+  const completedLevels = useMemo(() => getCompletedLevelCount(runtime.progress), [runtime.progress]);
+  const activeOutfit = useMemo(() => resolveActiveOutfit(settings, runtime.worldConfig.theme, achievementsState, completedLevels), [settings, runtime.worldConfig.theme, achievementsState, completedLevels]);
   const graphicsProfile = useMemo(() => getGraphicsProfile(settings), [settings]);
   const visibleCats = useMemo(() => runtime.cats.filter((c) => !runtime.capturedCatIds.includes(c.id)).length, [runtime.cats, runtime.capturedCatIds]);
   const missionEnemyBonus = runtime.levelConfig?.modifiers?.enemyBonus ?? 0;
@@ -172,6 +175,11 @@ export default function CatHunt3D() {
 
   const onPowerUpCollect = useCallback((type) => {
     haptic.success();
+    const result = runtime.activatePowerUp?.(type);
+    if (result?.message) {
+      showFeedback(result.message);
+      return;
+    }
     if (type === 'star') {
       runtime.addScore?.(200);
       showFeedback('⭐ +200 pts');
@@ -199,7 +207,28 @@ export default function CatHunt3D() {
   useEffect(() => {
     if (runtime.isLevelComplete && !isTransitionOpen) {
       setIsTransitionOpen(true);
-      setSettings((prev) => recordHighScore(prev, runtime.worldId, runtime.score));
+      const stars = runtime.score >= runtime.levelConfig.targetScore ? 3 : runtime.score >= runtime.levelConfig.targetScore * 0.75 ? 2 : 1;
+      const rewardKey = `${runtime.worldId}:${runtime.levelId}`;
+      const completedAfter = getCompletedLevelCount(runtime.progress);
+      const coins = 35 + stars * 25 + (missionType === 'escape' ? 35 : 0) + Math.min(60, Math.max(0, runtime.timeLeft));
+      const chests = completedAfter > 0 && completedAfter % 3 === 0 ? 1 : 0;
+      const outfit = OUTFITS.find((o) => getUnlockLevel(o) === completedAfter) ?? null;
+
+      setSettings((prev) => {
+        let next = recordHighScore(prev, runtime.worldId, runtime.score);
+        const claimed = new Set(next.claimedRewardKeys ?? []);
+        if (!claimed.has(rewardKey)) {
+          claimed.add(rewardKey);
+          next = {
+            ...next,
+            coins: (next.coins ?? 0) + coins,
+            chests: (next.chests ?? 0) + chests,
+            claimedRewardKeys: Array.from(claimed)
+          };
+          setRewardToast({ coins, chests, outfit });
+        }
+        return next;
+      });
       grantAchievements('level-complete', { worldId: runtime.worldId, levelId: runtime.levelId, score: runtime.score, targetScore: runtime.levelConfig.targetScore, timeLeft: runtime.timeLeft });
     }
   }, [runtime.isLevelComplete, isTransitionOpen]);
@@ -248,7 +277,8 @@ export default function CatHunt3D() {
       haptic.capture();
       const isGoldenCat = game3dRef.current?.isGolden?.(result.catId);
       const comboText = captureResult.comboCount > 1 ? ` | x${captureResult.comboCount} Combo` : '';
-      const pointsText = `+${captureResult.pointsAwarded ?? 100} pts${comboText}`;
+      const multText = captureResult.powerMultiplier > 1 ? ' | x2 Power' : '';
+      const pointsText = `+${captureResult.pointsAwarded ?? 100} pts${comboText}${multText}`;
       if (isGoldenCat) {
         setSettings((s) => ({ ...s, goldenCatsCaught: (s.goldenCatsCaught ?? 0) + 1 }));
         showFeedback(`Michi DORADO ${pointsText}`);
@@ -292,12 +322,14 @@ export default function CatHunt3D() {
           dailyStreak={settings.dailyStreak?.count ?? 0}
           goldenCats={settings.goldenCatsCaught ?? 0}
           highScores={settings.highScores ?? {}}
+          coins={settings.coins ?? 0}
+          chests={settings.chests ?? 0}
         />
         {feedback && <div className="catch-feedback">{feedback}</div>}
         <WorldMapPanel isOpen={isWorldPanelOpen} worlds={runtime.worlds} currentWorldId={runtime.worldId} unlockedWorldIds={runtime.progress.unlockedWorldIds} progress={runtime.progress} onSelectWorld={(wid) => { runtime.goToWorld(wid); setIsWorldPanelOpen(false); setScreen('game'); }} onClose={() => setIsWorldPanelOpen(false)} onLockedWorld={() => showFeedback('Completa el mundo anterior para desbloquearlo')} />
         <CatCollection isOpen={isCollectionOpen} worlds={runtime.worlds} progress={runtime.progress} onClose={() => setIsCollectionOpen(false)} />
         <AchievementsPanel isOpen={isAchievementsOpen} achievements={achievementsState} onClose={() => setIsAchievementsOpen(false)} />
-        <Wardrobe isOpen={isWardrobeOpen} currentOutfitId={settings.outfitOverride ?? 'auto'} achievements={achievementsState} totalCats={achievementsState?.totalCaught ?? 0} onSelect={(id) => { setSettings((s) => ({ ...s, outfitOverride: id })); setIsWardrobeOpen(false); }} onClose={() => setIsWardrobeOpen(false)} />
+        <Wardrobe isOpen={isWardrobeOpen} currentOutfitId={settings.outfitOverride ?? 'auto'} achievements={achievementsState} totalCats={achievementsState?.totalCaught ?? 0} completedLevels={completedLevels} onSelect={(id) => { setSettings((s) => ({ ...s, outfitOverride: id })); setIsWardrobeOpen(false); }} onClose={() => setIsWardrobeOpen(false)} />
         <MultiplayerLobby
           isOpen={isMultiplayerOpen}
           status={mpStatus}
@@ -310,6 +342,7 @@ export default function CatHunt3D() {
         <DifficultySelector isOpen={isDifficultyOpen} current={runtime.difficulty} allCompleted={false} onSelect={(diff) => { runtime.setDifficulty(diff); setSettings((s) => ({ ...s, difficulty: diff })); setIsDifficultyOpen(false); }} onClose={() => setIsDifficultyOpen(false)} />
         <ShareProgressModal isOpen={isShareOpen} settings={settings} achievements={achievementsState} onClose={() => setIsShareOpen(false)} />
         <AchievementToast achievement={achievementToast} />
+        <RewardToast reward={rewardToast} onClose={() => setRewardToast(null)} />
       </>
     );
   }
@@ -335,7 +368,7 @@ export default function CatHunt3D() {
         capturedCatIds={runtime.capturedCatIds}
         isPaused={runtime.isPaused}
         isLevelComplete={runtime.isLevelComplete}
-        speedMode={runtime.speedMode}
+        speedMode={runtime.isTurboActive ? 'fast' : runtime.speedMode}
         levelIndex={runtime.currentLevelIndex ?? 0}
         worldTheme={runtime.worldConfig.theme}
         missionType={missionType}
@@ -359,9 +392,10 @@ export default function CatHunt3D() {
         onBellActivate={(bellId) => { runtime.activateBell?.(bellId); haptic.success(); showFeedback('🔔 Campanita activada'); }}
       />
 
-      <MobileGameInputLayer touchState={touchState} speedMode={runtime.speedMode} isCatInCaptureRange={missionType === 'escape' ? false : runtime.nearestCatDistance <= 2.6} onCatch={onCatch} onJump={() => game3dRef.current?.requestJump?.()} onToggleSpeed={runtime.toggleSpeedMode} />
+      <MobileGameInputLayer touchState={touchState} speedMode={runtime.isTurboActive ? 'fast' : runtime.speedMode} isCatInCaptureRange={missionType === 'escape' ? false : runtime.nearestCatDistance <= 2.6} onCatch={onCatch} onJump={() => game3dRef.current?.requestJump?.()} onToggleSpeed={runtime.toggleSpeedMode} />
 
       {feedback && <div className="catch-feedback">{feedback}</div>}
+      <RewardToast reward={rewardToast} onClose={() => setRewardToast(null)} />
 
       <WorldMapPanel isOpen={isWorldPanelOpen} worlds={runtime.worlds} currentWorldId={runtime.worldId} unlockedWorldIds={runtime.progress.unlockedWorldIds} progress={runtime.progress} onSelectWorld={(wid) => { runtime.goToWorld(wid); setIsWorldPanelOpen(false); }} onClose={() => setIsWorldPanelOpen(false)} onLockedWorld={() => showFeedback('Completa el mundo anterior para desbloquearlo')} />
 

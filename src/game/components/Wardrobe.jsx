@@ -1,14 +1,16 @@
-import { OUTFITS, isOutfitUnlocked } from '../outfits/outfits';
+import { OUTFITS, getUnlockLevel, isOutfitUnlocked } from '../outfits/outfits';
 
-export default function Wardrobe({ isOpen, currentOutfitId, achievements, totalCats = 0, onSelect, onClose }) {
+export default function Wardrobe({ isOpen, currentOutfitId, achievements, totalCats = 0, completedLevels = 0, onSelect, onClose }) {
   if (!isOpen) return null;
+  const unlockedCount = OUTFITS.filter((o) => isOutfitUnlocked(o, achievements, totalCats, completedLevels)).length;
+
   return (
     <div className="kw-collection-overlay" data-game-ui="true" onClick={onClose}>
       <div className="kw-collection-panel" onClick={(e) => e.stopPropagation()}>
         <div className="kw-collection-header">
           <div>
             <h2>Vestidor</h2>
-            <small>Cambia el look de Sarita · {OUTFITS.filter((o) => isOutfitUnlocked(o, achievements, totalCats)).length}/{OUTFITS.length} desbloqueados</small>
+            <small>{unlockedCount}/{OUTFITS.length} outfits · desbloquea 1 cada 3 niveles</small>
           </div>
           <button className="kw-circle-btn" onClick={onClose} aria-label="Cerrar">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.3 5.7L12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3 10.6 10.6 16.9 4.3z"/></svg>
@@ -24,14 +26,15 @@ export default function Wardrobe({ isOpen, currentOutfitId, achievements, totalC
                 ✨
               </div>
               <strong>Auto por mundo</strong>
-              <small>Cambia según bioma</small>
+              <small>Cambia según bioma y outfits desbloqueados</small>
               {currentOutfitId === 'auto' && <span className="kw-wardrobe-badge">Activo</span>}
             </button>
           </div>
           <div className="kw-wardrobe-grid">
             {OUTFITS.map((o) => {
-              const unlocked = isOutfitUnlocked(o, achievements, totalCats);
+              const unlocked = isOutfitUnlocked(o, achievements, totalCats, completedLevels);
               const active = currentOutfitId === o.id;
+              const needed = getUnlockLevel(o);
               return (
                 <button
                   key={o.id}
@@ -46,11 +49,8 @@ export default function Wardrobe({ isOpen, currentOutfitId, achievements, totalC
                     {unlocked ? o.icon : '🔒'}
                   </div>
                   <strong>{o.name}</strong>
-                  {!unlocked && o.unlock && (
-                    <small>
-                      {o.unlock.startsWith('achievement:') ? '🏆 Logro' : 'Por desbloquear'}
-                    </small>
-                  )}
+                  {!unlocked && <small>Completa {needed} niveles</small>}
+                  {unlocked && needed > 0 && <small>Ganado en nivel {needed}</small>}
                   {active && unlocked && <span className="kw-wardrobe-badge">Actual</span>}
                 </button>
               );

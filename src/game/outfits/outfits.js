@@ -1,38 +1,31 @@
 /**
  * Sistema de outfits de Sarita.
- * Modo combo: por defecto auto-cambia según mundo, pero player puede
- * forzar un outfit desde el Vestidor (override manual).
- *
- * Cada outfit tiene:
- * - id, name, icon
- * - tint: color que se aplica a las prendas del modelo (vestido/gorro)
- * - hatColor / dressColor opcional para fine control
- * - unlock: criterio (achievementId, totalCats, freeFromStart)
+ * Se desbloquea un outfit nuevo cada 3 niveles completados.
  */
 export const OUTFITS = [
-  { id: 'default',  name: 'Sarita',          icon: '👧', dressColor: '#c084fc', hatColor: '#ec4899', unlock: 'free' },
-  { id: 'sakura',   name: 'Kimono Sakura',   icon: '🌸', dressColor: '#ff9bc8', hatColor: '#ff6ba6', unlock: 'free' },
-  { id: 'beach',    name: 'Traje Playa',     icon: '🌊', dressColor: '#a8e0ff', hatColor: '#ffd87a', unlock: 'free' },
-  { id: 'aurora',   name: 'Abrigo Aurora',   icon: '❄️', dressColor: '#7affd1', hatColor: '#cfe7ff', unlock: 'free' },
-  { id: 'neon',     name: 'Cyber Sarita',    icon: '⚡', dressColor: '#7c4dff', hatColor: '#ff66cc', unlock: 'achievement:secret-city' },
-  { id: 'lunar',    name: 'Princesa Lunar',  icon: '🌙', dressColor: '#a8c8ff', hatColor: '#d4b6ff', unlock: 'achievement:all-night' },
-  { id: 'forest',   name: 'Hada del Bosque', icon: '🍃', dressColor: '#7ac985', hatColor: '#ffd066', unlock: 'achievement:all-day' },
-  { id: 'kitty',    name: 'Disfraz Michi',   icon: '🐱', dressColor: '#ffd6c5', hatColor: '#ff8eb8', hasEars: true, unlock: 'achievement:collector-50' },
-  { id: 'royal',    name: 'Reina Kawaii',    icon: '👑', dressColor: '#ffe079', hatColor: '#c084fc', unlock: 'achievement:master' }
+  { id: 'default',  name: 'Sarita Base',        icon: '👧', dressColor: '#c084fc', hatColor: '#ec4899', unlock: 'levels:0' },
+  { id: 'sakura',   name: 'Kimono Sakura',      icon: '🌸', dressColor: '#ff9bc8', hatColor: '#ff6ba6', unlock: 'levels:3' },
+  { id: 'beach',    name: 'Traje Playa',        icon: '🌊', dressColor: '#a8e0ff', hatColor: '#ffd87a', unlock: 'levels:6' },
+  { id: 'forest',   name: 'Hada del Bosque',    icon: '🍃', dressColor: '#7ac985', hatColor: '#ffd066', unlock: 'levels:9' },
+  { id: 'lunar',    name: 'Princesa Lunar',     icon: '🌙', dressColor: '#a8c8ff', hatColor: '#d4b6ff', unlock: 'levels:12' },
+  { id: 'aurora',   name: 'Abrigo Aurora',      icon: '❄️', dressColor: '#7affd1', hatColor: '#cfe7ff', unlock: 'levels:15' },
+  { id: 'kitty',    name: 'Disfraz Michi',      icon: '🐱', dressColor: '#ffd6c5', hatColor: '#ff8eb8', hasEars: true, unlock: 'levels:18' },
+  { id: 'royal',    name: 'Reina Kawaii',       icon: '👑', dressColor: '#ffe079', hatColor: '#c084fc', unlock: 'levels:21' },
+  { id: 'neon',     name: 'Cyber Sarita',       icon: '⚡', dressColor: '#7c4dff', hatColor: '#ff66cc', unlock: 'levels:24' },
+  { id: 'shadow',   name: 'Guardiana Niebla',   icon: '🖤', dressColor: '#3b2f6a', hatColor: '#ff5f93', unlock: 'levels:27' }
 ];
 
-// Mapeo automático: bioma → outfit
 export const BIOME_OUTFITS = {
   'mystic-forest': 'forest',
   'sakura-city': 'sakura',
-  'crystal-lake': 'default',
-  'mist-grove': 'default',
+  'crystal-lake': 'beach',
+  'mist-grove': 'shadow',
   'pastel-port': 'beach',
-  'cloud-valley': 'default',
+  'cloud-valley': 'aurora',
   'moon-garden': 'lunar',
   'cotton-beach': 'beach',
   'aurora-mountain': 'aurora',
-  'stellar-village': 'lunar',
+  'stellar-village': 'royal',
   'neon-city': 'neon'
 };
 
@@ -40,8 +33,19 @@ export function getOutfitById(id) {
   return OUTFITS.find((o) => o.id === id) ?? OUTFITS[0];
 }
 
-export function isOutfitUnlocked(outfit, achievements, totalCats = 0) {
+export function getUnlockLevel(outfit) {
+  if (!outfit?.unlock || outfit.unlock === 'free') return 0;
+  if (outfit.unlock.startsWith('levels:')) return parseInt(outfit.unlock.split(':')[1], 10) || 0;
+  return 999;
+}
+
+export function getCompletedLevelCount(progress) {
+  return Object.values(progress?.levels ?? {}).filter((level) => level?.completed).length;
+}
+
+export function isOutfitUnlocked(outfit, achievements, totalCats = 0, completedLevels = 0) {
   if (!outfit?.unlock || outfit.unlock === 'free') return true;
+  if (outfit.unlock.startsWith('levels:')) return completedLevels >= getUnlockLevel(outfit);
   if (outfit.unlock.startsWith('achievement:')) {
     const id = outfit.unlock.split(':')[1];
     return !!achievements?.unlocked?.[id];
@@ -53,18 +57,23 @@ export function isOutfitUnlocked(outfit, achievements, totalCats = 0) {
   return false;
 }
 
-/**
- * Resolver outfit activo:
- * - Si user override: ese outfit (si está desbloqueado)
- * - Sino: outfit auto-asignado por bioma actual
- */
-export function resolveActiveOutfit(settings, biomeTheme, achievements) {
+export function getNextOutfitUnlock(completedLevels = 0) {
+  return OUTFITS.find((outfit) => getUnlockLevel(outfit) > completedLevels) ?? null;
+}
+
+export function getUnlockedOutfits(achievements, totalCats = 0, completedLevels = 0) {
+  return OUTFITS.filter((outfit) => isOutfitUnlocked(outfit, achievements, totalCats, completedLevels));
+}
+
+export function resolveActiveOutfit(settings, biomeTheme, achievements, completedLevels = 0) {
   const totalCats = achievements?.totalCaught ?? 0;
   const override = settings?.outfitOverride;
   if (override && override !== 'auto') {
     const o = getOutfitById(override);
-    if (isOutfitUnlocked(o, achievements, totalCats)) return o;
+    if (isOutfitUnlocked(o, achievements, totalCats, completedLevels)) return o;
   }
   const autoId = BIOME_OUTFITS[biomeTheme] ?? 'default';
-  return getOutfitById(autoId);
+  const autoOutfit = getOutfitById(autoId);
+  if (isOutfitUnlocked(autoOutfit, achievements, totalCats, completedLevels)) return autoOutfit;
+  return OUTFITS[0];
 }

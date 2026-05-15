@@ -10,6 +10,7 @@
  * tutorialSeen: bool
  * dailyStreak: { count, lastDate }
  * goldenCatsCaught: number
+ * coins/chests: recompensas ligeras para dar progreso entre niveles
  */
 
 import { GRAPHICS_PRESETS } from '../graphicsSettings';
@@ -28,7 +29,10 @@ const DEFAULTS = {
   tutorialSeen: false,
   dailyStreak: { count: 0, lastDate: null },
   goldenCatsCaught: 0,
-  highScores: {} // { worldId: bestScore }
+  coins: 0,
+  chests: 0,
+  claimedRewardKeys: [],
+  highScores: {}
 };
 
 export function loadSettings() {
@@ -43,7 +47,8 @@ export function loadSettings() {
       shadowQuality: preset.shadowQuality,
       vegetationDensity: preset.vegetationDensity,
       drawDistance: preset.drawDistance,
-      ...parsed
+      ...parsed,
+      claimedRewardKeys: Array.isArray(parsed.claimedRewardKeys) ? parsed.claimedRewardKeys : []
     };
   } catch { return { ...DEFAULTS }; }
 }
