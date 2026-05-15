@@ -1,3 +1,4 @@
+import { createContext, useContext } from 'react';
 import NatureModel from './NatureAssets.jsx';
 import {
   PineTree, SakuraTree, PalmTree, CrystalSpire, BareTree, CottonTree,
@@ -6,6 +7,21 @@ import {
   Lantern, LilyPad, CloudPlatform, BeachUmbrella,
   NeonSkyscraper, NeonSign, StreetLamp, ParkedCar
 } from './primitives.jsx';
+
+const BiomeDensityContext = createContext(1);
+
+export function BiomeDensityProvider({ density = 1, children }) {
+  return (
+    <BiomeDensityContext.Provider value={density}>
+      {children}
+    </BiomeDensityContext.Provider>
+  );
+}
+
+function useScaledBiomeCount(count) {
+  const density = useContext(BiomeDensityContext);
+  return Math.max(1, Math.round(count * density));
+}
 
 /* Anillos: rmin..rmax = banda, count = elementos */
 function ring(count, rmin, rmax, jitter = 0.4, seedOffset = 0) {
@@ -39,7 +55,8 @@ function natureScatter(count, rmin, rmax, kinds, jitter = 0.6, scaleBase = 1.0, 
 }
 
 function NatureCloud({ count, rmin, rmax, kinds, jitter, scaleBase, scaleVar, yOffset, prefix }) {
-  return natureScatter(count, rmin, rmax, kinds, jitter, scaleBase, scaleVar, yOffset).map((it, i) => (
+  const scaledCount = useScaledBiomeCount(count);
+  return natureScatter(scaledCount, rmin, rmax, kinds, jitter, scaleBase, scaleVar, yOffset).map((it, i) => (
     <NatureModel key={`${prefix}-${i}`} kind={it.kind} position={it.position} rotation={it.rotation} scale={it.scale} />
   ));
 }

@@ -27,11 +27,11 @@ export default function ShareProgressModal({ isOpen, settings, achievements, onC
     ctx.fillStyle = '#6e3f9a';
     ctx.font = 'bold 64px Georgia';
     ctx.textAlign = 'center';
-    ctx.fillText('Sarita y los michi perdidos', canvas.width / 2, 110);
+    ctx.fillText('CAT HUNTER', canvas.width / 2, 110);
 
     ctx.font = 'italic 28px Georgia';
     ctx.fillStyle = '#8b5fb8';
-    ctx.fillText('Mi aventura kawaii', canvas.width / 2, 150);
+    ctx.fillText('Mi caceria de michis', canvas.width / 2, 150);
 
     // Stats
     const goldenCats = settings?.goldenCatsCaught ?? 0;
@@ -82,7 +82,7 @@ export default function ShareProgressModal({ isOpen, settings, achievements, onC
     ctx.font = 'italic 22px sans-serif';
     ctx.fillStyle = '#8b5fb8';
     ctx.textAlign = 'center';
-    ctx.fillText('Creado por Bernard y Sarita 💜', canvas.width / 2, canvas.height - 50);
+    ctx.fillText('CAT HUNTER creado por Bernard y Sarita', canvas.width / 2, canvas.height - 50);
 
     setDataUrl(canvas.toDataURL('image/png'));
   }, [isOpen, settings, achievements]);
@@ -90,7 +90,7 @@ export default function ShareProgressModal({ isOpen, settings, achievements, onC
   const onDownload = () => {
     if (!dataUrl) return;
     const link = document.createElement('a');
-    link.download = `sarita-progreso-${new Date().toISOString().slice(0,10)}.png`;
+    link.download = `cat-hunter-progreso-${new Date().toISOString().slice(0,10)}.png`;
     link.href = dataUrl;
     link.click();
   };
@@ -99,12 +99,12 @@ export default function ShareProgressModal({ isOpen, settings, achievements, onC
     if (!dataUrl) return;
     try {
       const blob = await (await fetch(dataUrl)).blob();
-      const file = new File([blob], 'sarita-progreso.png', { type: 'image/png' });
+      const file = new File([blob], 'cat-hunter-progreso.png', { type: 'image/png' });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
           files: [file],
-          title: 'Sarita y los michi perdidos',
-          text: 'Mira mi progreso en este juego kawaii 💜'
+          title: 'CAT HUNTER',
+          text: 'Mira mi progreso en CAT HUNTER'
         });
       } else {
         onDownload();

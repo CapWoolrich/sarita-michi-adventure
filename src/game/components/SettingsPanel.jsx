@@ -1,6 +1,24 @@
+import {
+  DRAW_DISTANCE_OPTIONS,
+  GRAPHICS_PRESETS,
+  SHADOW_QUALITY_OPTIONS,
+  VEGETATION_DENSITY_OPTIONS
+} from '../graphicsSettings';
+
 export default function SettingsPanel({ isOpen, settings, onChange, onClose }) {
   if (!isOpen) return null;
   const update = (patch) => onChange({ ...settings, ...patch });
+  const updateGraphicsPreset = (graphicsQuality) => {
+    const preset = GRAPHICS_PRESETS[graphicsQuality] ?? GRAPHICS_PRESETS.high;
+    update({
+      graphicsQuality,
+      postfxEnabled: preset.postfxEnabled,
+      shadowQuality: preset.shadowQuality,
+      vegetationDensity: preset.vegetationDensity,
+      drawDistance: preset.drawDistance
+    });
+  };
+
   return (
     <div className="kw-collection-overlay" data-game-ui="true" onClick={onClose}>
       <div className="kw-settings-panel" onClick={(e) => e.stopPropagation()}>
@@ -35,19 +53,64 @@ export default function SettingsPanel({ isOpen, settings, onChange, onClose }) {
               <span className="kw-switch-slider" />
             </label>
           </SettingRow>
-          <SettingRow label="Calidad gráfica">
+          <SettingRow label="Calidad grafica">
             <select
               className="kw-select"
               value={settings.graphicsQuality}
-              onChange={(e) => update({ graphicsQuality: e.target.value })}
+              onChange={(e) => updateGraphicsPreset(e.target.value)}
             >
-              <option value="high">Alta (con efectos)</option>
-              <option value="low">Baja (más rápida)</option>
+              {Object.entries(GRAPHICS_PRESETS).map(([id, preset]) => (
+                <option key={id} value={id}>{preset.label} - {preset.description}</option>
+              ))}
             </select>
           </SettingRow>
+          <div className="kw-settings-grid">
+            <SettingRow label="PostFX">
+              <label className="kw-switch">
+                <input
+                  type="checkbox"
+                  checked={settings.postfxEnabled ?? GRAPHICS_PRESETS.high.postfxEnabled}
+                  onChange={(e) => update({ postfxEnabled: e.target.checked })}
+                />
+                <span className="kw-switch-slider" />
+              </label>
+            </SettingRow>
+            <SettingRow label="Sombras">
+              <select
+                className="kw-select kw-select-compact"
+                value={settings.shadowQuality ?? GRAPHICS_PRESETS.high.shadowQuality}
+                onChange={(e) => update({ shadowQuality: e.target.value })}
+              >
+                {Object.entries(SHADOW_QUALITY_OPTIONS).map(([id, option]) => (
+                  <option key={id} value={id}>{option.label}</option>
+                ))}
+              </select>
+            </SettingRow>
+            <SettingRow label="Vegetacion">
+              <select
+                className="kw-select kw-select-compact"
+                value={settings.vegetationDensity ?? GRAPHICS_PRESETS.high.vegetationDensity}
+                onChange={(e) => update({ vegetationDensity: e.target.value })}
+              >
+                {Object.entries(VEGETATION_DENSITY_OPTIONS).map(([id, option]) => (
+                  <option key={id} value={id}>{option.label}</option>
+                ))}
+              </select>
+            </SettingRow>
+            <SettingRow label="Distancia">
+              <select
+                className="kw-select kw-select-compact"
+                value={settings.drawDistance ?? GRAPHICS_PRESETS.high.drawDistance}
+                onChange={(e) => update({ drawDistance: e.target.value })}
+              >
+                {Object.entries(DRAW_DISTANCE_OPTIONS).map(([id, option]) => (
+                  <option key={id} value={id}>{option.label}</option>
+                ))}
+              </select>
+            </SettingRow>
+          </div>
           <div className="kw-settings-hint">
-            La calidad baja desactiva post-procesamiento (bloom, viñeta).
-            Útil en dispositivos lentos.
+            Ultra aumenta vegetacion, sombras, distancia y efectos. Baja prioriza FPS.
           </div>
         </div>
       </div>

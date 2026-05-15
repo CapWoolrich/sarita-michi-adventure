@@ -11,11 +11,15 @@ export default function MinimalHUD({
   capturedCount,
   totalCats,
   timeLeft,
+  comboCount = 0,
+  lastCatchResult = null,
   isPaused,
   onHome,
   onPause
 }) {
   const lowTime = typeof timeLeft === 'number' && timeLeft <= 10;
+  const showCombo = comboCount > 1;
+  const points = showCombo ? lastCatchResult?.pointsAwarded : null;
   return (
     <>
       {/* TOP-LEFT: timer + cats compact */}
@@ -26,6 +30,11 @@ export default function MinimalHUD({
         <span className="kw-min-pill kw-min-paws">
           <PawIcon className="kw-min-icon" /> {capturedCount}/{totalCats}
         </span>
+        {showCombo && (
+          <span className="kw-min-pill kw-min-combo">
+            x{comboCount} Combo{points ? ` +${points}` : ''}
+          </span>
+        )}
       </div>
 
       {/* TOP-RIGHT: home button (también permite pausa con tap largo) */}
