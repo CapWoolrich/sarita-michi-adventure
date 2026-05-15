@@ -5,12 +5,13 @@ import { makeInitialHealth, INVULN_AFTER_HIT_MS, HEAL_PER_CAT, DIFFICULTY_TIME_M
 import { loadProgress, markLevelComplete, saveProgress, setCurrentWorldLevel, unlockWorld } from './progression/progressionStorage';
 
 const tuneLevel = (level, difficulty) => {
+  const isEscape = level?.missionType === 'escape';
   const cMult = DIFFICULTY_CAT_MULT[difficulty] ?? 1;
   const tMult = DIFFICULTY_TIME_MULT[difficulty] ?? 1;
-  const catCount = Math.max(3, Math.round((level?.catCount ?? 6) * cMult));
-  const timeLimit = Math.max(20, Math.floor((level?.timeLimit ?? 90) * tMult));
+  const catCount = isEscape ? 0 : Math.max(3, Math.round((level?.catCount ?? 6) * cMult));
+  const timeLimit = isEscape ? (level?.objectives?.escapeSeconds ?? 45) : Math.max(20, Math.floor((level?.timeLimit ?? 90) * tMult));
   const baseNeed = level?.objectives?.requiredCats ?? catCount;
-  const requiredCats = level?.objectives?.requiresGoldenCat ? baseNeed : Math.min(catCount, Math.max(1, Math.round(baseNeed * cMult)));
+  const requiredCats = isEscape ? 0 : level?.objectives?.requiresGoldenCat ? baseNeed : Math.min(catCount, Math.max(1, Math.round(baseNeed * cMult)));
   return { ...level, catCount, timeLimit, objectives: { ...(level?.objectives ?? {}), requiredCats }, modifiers: { ...(level?.modifiers ?? {}) } };
 };
 const initialMission = (level) => ({ activatedBellIds: [], requiredBells: level?.objectives?.requiredBells ?? 0, goldenCatCaptured: false, isGameOver: false, missionMessage: '' });
@@ -20,6 +21,13 @@ const makeBellSet = (worldId, levelId, count = 0) => Array.from({ length: count 
   const radius = 18 + ((base + i * 23) % 36);
   return { id: `${worldId}-${levelId}-bell-${i + 1}`, position: [Math.cos(angle) * radius, 1.05, Math.sin(angle) * radius] };
 });
+const makeExitPortal = (worldId, levelId, missionType) => {
+  if (missionType !== 'escape') return null;
+  const base = Array.from(`${worldId}-${levelId}-exit`).reduce((sum, char, idx) => sum + char.charCodeAt(0) * (idx + 7), 0);
+  const angle = ((base % 360) * Math.PI) / 180;
+  const radius = 70;
+  return { id: `${worldId}-${levelId}-portal`, position: [Math.cos(angle) * radius, 1.05, Math.sin(angle) * radius], radius: 4.4 };
+};
 
 const COMBO_WINDOW_MS = 4500;
 const COMBO_BONUS_STEP = 0.15;
@@ -68,6 +76,7 @@ export default function useGameRuntime() {
   const currentLevelIndex = Math.max(0, worldConfig.levels.findIndex((l) => l.id === levelId));
   const isLastLevelInWorld = currentLevelIndex === worldConfig.levels.length - 1;
   const bells = useMemo(() => levelConfig.missionType === 'exploration' ? makeBellSet(worldId, levelId, levelConfig.objectives?.requiredBells ?? 0) : [], [levelConfig.missionType, levelConfig.objectives?.requiredBells, levelId, worldId]);
+  const exitPortal = useMemo(() => makeExitPortal(worldId, levelId, levelConfig.missionType), [levelConfig.missionType, levelId, worldId]);
 
   const startLevel = useCallback((nextWorldId, nextLevelId) => {
     const nextWorld = getWorldById(nextWorldId) ?? WORLDS[0];
@@ -88,7 +97,17 @@ export default function useGameRuntime() {
     });
   }, [isLastLevelInWorld, levelId, levelConfig.targetScore, score, worldConfig.order, worldId]);
 
+  const completeEscape = useCallback((source = 'portal') => {
+    if (isLevelComplete || missionState.isGameOver || levelConfig.missionType !== 'escape') return;
+    const bonus = source === 'portal' ? 260 : 160;
+    const finalScore = score + bonus + Math.max(0, timeLeft) * 5;
+    setScore(finalScore);
+    setMissionState((s) => ({ ...s, missionMessage: source === 'portal' ? '¡Llegaste al portal!' : '¡Sobreviviste el escape!' }));
+    completeLevel(finalScore);
+  }, [completeLevel, isLevelComplete, levelConfig.missionType, missionState.isGameOver, score, timeLeft]);
+
   const captureCat = useCallback((catId) => {
+    if (levelConfig.missionType === 'escape') return { success: false, reason: 'escape_mode' };
     if (!catId || !cats.some((c) => c.id === catId)) return { success: false, reason: 'invalid_cat' };
     if (capturedCatIds.includes(catId)) return { success: false, reason: 'already_captured' };
     if (levelConfig.missionType === 'exploration' && missionState.activatedBellIds.length < missionState.requiredBells) { setLastCatchResult({ success: false, reason: 'bells_required' }); setMissionState((s) => ({ ...s, missionMessage: 'Activa las campanitas primero' })); return { success: false, reason: 'bells_required' }; }
@@ -132,7 +151,7 @@ export default function useGameRuntime() {
     return () => clearTimeout(timeout);
   }, [comboExpiresAt]);
   useEffect(() => { if (isPaused || isLevelComplete || missionState.isGameOver) return; const t = setInterval(() => setTimeLeft((v) => (v <= 1 ? 0 : v - 1)), 1000); return () => clearInterval(t); }, [isPaused, isLevelComplete, missionState.isGameOver]);
-  useEffect(() => { if (timeLeft === 0 && !isLevelComplete) { setIsPaused(true); setMissionState((s) => ({ ...s, isGameOver: true, missionMessage: 'Se acabó el tiempo' })); } }, [isLevelComplete, timeLeft]);
+  useEffect(() => { if (timeLeft === 0 && !isLevelComplete) { if (levelConfig.missionType === 'escape') completeEscape('survival'); else { setIsPaused(true); setMissionState((s) => ({ ...s, isGameOver: true, missionMessage: 'Se acabó el tiempo' })); } } }, [completeEscape, isLevelComplete, levelConfig.missionType, timeLeft]);
 
-  return useMemo(() => ({ worlds: WORLDS, progress, worldId, levelId, currentLevelIndex, isLastLevelInWorld, worldConfig, levelConfig, cats, totalCats, capturedCatIds, score, timeLeft, isPaused, isLevelComplete, isGameOver: missionState.isGameOver, nearestCatId, nearestCatDistance, lastCatchResult, comboCount, comboExpiresAt, comboWindowMs: COMBO_WINDOW_MS, speedMode, health, missionState, bells, takeDamage, difficulty, setDifficulty, startLevel, captureCat, completeLevel, restartLevel, goToNextLevel, goToWorld, setNearestCat, setLastCatchResult, activateBell, addScore, addTime, toggleSpeedMode, setIsPaused }), [progress, worldId, levelId, currentLevelIndex, isLastLevelInWorld, worldConfig, levelConfig, cats, totalCats, capturedCatIds, score, timeLeft, isPaused, isLevelComplete, missionState, bells, nearestCatId, nearestCatDistance, lastCatchResult, comboCount, comboExpiresAt, speedMode, health, takeDamage, difficulty, startLevel, captureCat, completeLevel, restartLevel, goToNextLevel, goToWorld, setNearestCat, activateBell, addScore, addTime, toggleSpeedMode]);
+  return useMemo(() => ({ worlds: WORLDS, progress, worldId, levelId, currentLevelIndex, isLastLevelInWorld, worldConfig, levelConfig, cats, totalCats, capturedCatIds, score, timeLeft, isPaused, isLevelComplete, isGameOver: missionState.isGameOver, nearestCatId, nearestCatDistance, lastCatchResult, comboCount, comboExpiresAt, comboWindowMs: COMBO_WINDOW_MS, speedMode, health, missionState, bells, exitPortal, takeDamage, difficulty, setDifficulty, startLevel, captureCat, completeLevel, completeEscape, restartLevel, goToNextLevel, goToWorld, setNearestCat, setLastCatchResult, activateBell, addScore, addTime, toggleSpeedMode, setIsPaused }), [progress, worldId, levelId, currentLevelIndex, isLastLevelInWorld, worldConfig, levelConfig, cats, totalCats, capturedCatIds, score, timeLeft, isPaused, isLevelComplete, missionState, bells, exitPortal, nearestCatId, nearestCatDistance, lastCatchResult, comboCount, comboExpiresAt, speedMode, health, takeDamage, difficulty, startLevel, captureCat, completeLevel, completeEscape, restartLevel, goToNextLevel, goToWorld, setNearestCat, activateBell, addScore, addTime, toggleSpeedMode]);
 }
