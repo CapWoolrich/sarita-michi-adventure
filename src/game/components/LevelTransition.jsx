@@ -1,38 +1,47 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /**
  * Transición entre niveles:
- * 1. Card "¡Nivel Completado!" con stats (0..1.6s)
- * 2. Fade negro (1.6..2.2s)
- * 3. Pequeño delay con fly-through visual (2.2..3.0s)
- * 4. Llama onAdvance al final → carga el siguiente nivel
+ * 1. Card "¡Nivel Completado!" con stats
+ * 2. Fade corto
+ * 3. Llama onAdvance al final → carga el siguiente nivel
+ *
+ * Importante: onAdvance viene de CatHunt3D y puede cambiar de identidad en cada render.
+ * Guardarlo en ref evita reiniciar los timers de transición y reduce trabas al pasar de nivel.
  */
 export default function LevelTransition({ open, score, capturedCount, totalCats, targetScore, onAdvance }) {
   const [stage, setStage] = useState('hidden');
+  const onAdvanceRef = useRef(onAdvance);
+
+  useEffect(() => {
+    onAdvanceRef.current = onAdvance;
+  }, [onAdvance]);
 
   useEffect(() => {
     if (!open) {
       setStage('hidden');
-      return;
+      return undefined;
     }
+
     setStage('card');
-    const t1 = setTimeout(() => setStage('fade'), 1600);
-    const t2 = setTimeout(() => setStage('fly'), 2200);
+    const t1 = setTimeout(() => setStage('fade'), 1200);
+    const t2 = setTimeout(() => setStage('fly'), 1700);
     const t3 = setTimeout(() => {
       setStage('hidden');
-      onAdvance?.();
-    }, 3000);
+      onAdvanceRef.current?.();
+    }, 2200);
+
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
     };
-  }, [open, onAdvance]);
+  }, [open]);
 
   if (stage === 'hidden') return null;
 
   const stars = score >= targetScore ? 3 : score >= targetScore * 0.75 ? 2 : 1;
-  const allCaptured = capturedCount >= totalCats;
+  const allCaptured = totalCats === 0 ? true : capturedCount >= totalCats;
 
   return (
     <div className={`kw-level-transition kw-trans-${stage}`} data-game-ui="true">
