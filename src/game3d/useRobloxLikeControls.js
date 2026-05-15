@@ -17,7 +17,7 @@ const lerpAngle = (from, to, alpha) => {
   return from + delta * alpha;
 };
 
-export default function useRobloxLikeControls({ characterRef, touchState, isPaused = false, isLevelComplete = false, onDebugUpdate, speedMode = 'normal', jumpRequestedRef }) {
+export default function useRobloxLikeControls({ characterRef, touchState, isPaused = false, isLevelComplete = false, onDebugUpdate, speedMode = 'normal', jumpRequestedRef, movementMultiplierRef }) {
   const { camera } = useThree();
   const cameraYawRef = useRef(0);
   const cameraPitchRef = useRef(0.35);
@@ -94,10 +94,11 @@ export default function useRobloxLikeControls({ characterRef, touchState, isPaus
     moveDirection.set(0, 0, 0).addScaledVector(forward, forwardInput).addScaledVector(right, strafeInput);
 
     const speedMultiplier = speedMode === 'fast' ? 1.7 : 1;
+    const missionMultiplier = movementMultiplierRef?.current ?? 1;
 
     if (!isPaused && !isLevelComplete && moveDirection.lengthSq() > 0.0001) {
       moveDirection.normalize();
-      const speed = 5.1 * speedMultiplier;
+      const speed = 5.1 * speedMultiplier * missionMultiplier;
       player.position.x += moveDirection.x * speed * delta;
       player.position.z += moveDirection.z * speed * delta;
       player.position.x = clamp(player.position.x, -110, 110);
@@ -105,7 +106,6 @@ export default function useRobloxLikeControls({ characterRef, touchState, isPaus
       const targetYaw = Math.atan2(moveDirection.x, moveDirection.z);
       player.rotation.y = lerpAngle(player.rotation.y, targetYaw, 0.18);
     }
-
 
     const jumpState = player.userData.jumpState || { jumpOffset: 0, verticalVelocity: 0, grounded: true, isJumping: false };
     const jumpRequested = Boolean(jumpRequestedRef?.current);
@@ -162,7 +162,8 @@ export default function useRobloxLikeControls({ characterRef, touchState, isPaus
       isJumping: jumpState.isJumping,
       verticalVelocity: jumpState.verticalVelocity,
       jumpOffset: jumpState.jumpOffset,
-      jumpRequested: Boolean(jumpRequestedRef?.current)
+      jumpRequested: Boolean(jumpRequestedRef?.current),
+      missionMultiplier
     });
   });
 
