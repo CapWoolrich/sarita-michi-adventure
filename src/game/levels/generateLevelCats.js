@@ -46,6 +46,7 @@ function getSafeSpawnArc(worldTheme) {
 }
 
 function poissonSample(count, worldTheme, seed = 0) {
+  if (count <= 0) return [];
   const random = mulberry32(seed);
   const [aMin, aMax] = getSafeSpawnArc(worldTheme);
   const arc = aMax - aMin;
@@ -86,6 +87,8 @@ function poissonSample(count, worldTheme, seed = 0) {
 
 export function generateLevelCats(worldConfig, levelConfig) {
   const count = Number(levelConfig?.catCount ?? 0);
+  if (count <= 0) return [];
+
   const worldTheme = worldConfig?.theme ?? 'mystic-forest';
   const seed = hashString(`${worldConfig?.id ?? 'world-1'}:${levelConfig?.id ?? 'nivel-1'}:${levelConfig?.missionType ?? 'rescue'}`);
   const random = mulberry32(seed + 31);
@@ -93,8 +96,8 @@ export function generateLevelCats(worldConfig, levelConfig) {
   const positions = poissonSample(count, worldTheme, seed);
   const mustHaveGolden = levelConfig?.forceGoldenCat || levelConfig?.missionType === 'golden' || levelConfig?.missionType === 'finale';
   const goldenIndex = mustHaveGolden
-    ? Math.max(0, Math.floor(random() * Math.max(1, count)))
-    : (random() < 0.25 ? Math.floor(random() * Math.max(1, count)) : -1);
+    ? Math.max(0, Math.floor(random() * count))
+    : (random() < 0.25 ? Math.floor(random() * count) : -1);
 
   return Array.from({ length: count }, (_, index) => {
     const profile = CAT_PROFILES[index % CAT_PROFILES.length];
