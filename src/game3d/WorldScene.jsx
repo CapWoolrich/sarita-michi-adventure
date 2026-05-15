@@ -20,6 +20,25 @@ const THEMES = {
   'neon-city':       { skyTop:'#1a0838', skyBot:'#5d2a78', sun:'#ff8fee', fog:'#3a1858', ground:'#1f1a35', pathColor:'#3d2858', accent:'#ff66cc', ambient:0.25, sunIntensity:0.5 }
 };
 
+function applyMissionMood(theme, missionType, modifiers = {}) {
+  if (missionType === 'escape') {
+    return { ...theme, skyTop: '#2a0633', skyBot: '#190a24', fog: '#3a1238', accent: '#ff5f93', ambient: Math.max(0.15, theme.ambient * 0.55), sunIntensity: theme.sunIntensity * 0.65 };
+  }
+  if (missionType === 'fog' || modifiers.extraFog) {
+    return { ...theme, ambient: Math.max(0.18, theme.ambient * 0.7), sunIntensity: theme.sunIntensity * 0.72 };
+  }
+  if (missionType === 'golden' || modifiers.goldenMood) {
+    return { ...theme, sun: '#ffe18a', accent: '#ffd066', sunIntensity: theme.sunIntensity * 1.12 };
+  }
+  if (missionType === 'time_attack' || modifiers.urgentTimer) {
+    return { ...theme, sun: '#ffbe7a', accent: '#ff8b5c', sunIntensity: theme.sunIntensity * 1.08 };
+  }
+  if (missionType === 'slow_zone') {
+    return { ...theme, accent: '#8edcff', fog: '#cbeeff' };
+  }
+  return theme;
+}
+
 function SkyDome({ top, bot }) {
   const geom = useMemo(() => {
     const g = new THREE.SphereGeometry(720, 32, 16);
@@ -43,11 +62,13 @@ function SkyDome({ top, bot }) {
   );
 }
 
-export default function WorldScene({ worldTheme = 'mystic-forest', graphicsProfile = null }) {
-  const theme = THEMES[worldTheme] ?? THEMES['mystic-forest'];
+export default function WorldScene({ worldTheme = 'mystic-forest', graphicsProfile = null, missionType = 'rescue', missionModifiers = {} }) {
+  const baseTheme = THEMES[worldTheme] ?? THEMES['mystic-forest'];
+  const theme = applyMissionMood(baseTheme, missionType, missionModifiers);
   const Biome = BIOMES[worldTheme] ?? BIOMES['mystic-forest'];
-  const fogNear = graphicsProfile?.fogNear ?? 80;
-  const fogFar = graphicsProfile?.fogFar ?? 380;
+  const missionFog = missionType === 'fog' || missionType === 'escape' || missionModifiers.extraFog;
+  const fogNear = missionFog ? 18 : (graphicsProfile?.fogNear ?? 80);
+  const fogFar = missionFog ? 135 : (graphicsProfile?.fogFar ?? 380);
   const shadowMapSize = graphicsProfile?.shadowMapSize ?? 1024;
   const shadowsEnabled = (graphicsProfile?.shadowQuality ?? 'high') !== 'off';
   const vegetationDensity = graphicsProfile?.vegetationMultiplier ?? 1;
