@@ -2,11 +2,17 @@
  * Settings de usuario persistentes.
  * audioVolume: 0..1 (master volume del audio Tone.js)
  * hapticsEnabled: bool
- * graphicsQuality: 'low' | 'high' (low desactiva postFX para móviles débiles)
+ * graphicsQuality: 'low' | 'medium' | 'high' | 'ultra'
+ * postfxEnabled: bool
+ * shadowQuality: 'off' | 'low' | 'high'
+ * vegetationDensity: 'low' | 'normal' | 'dense' | 'ultra'
+ * drawDistance: 'near' | 'mid' | 'far'
  * tutorialSeen: bool
  * dailyStreak: { count, lastDate }
  * goldenCatsCaught: number
  */
+
+import { GRAPHICS_PRESETS } from '../graphicsSettings';
 
 const KEY = 'sarita.userSettings.v1';
 
@@ -15,6 +21,10 @@ const DEFAULTS = {
   audioEnabled: true,
   hapticsEnabled: true,
   graphicsQuality: 'high',
+  postfxEnabled: true,
+  shadowQuality: 'high',
+  vegetationDensity: 'dense',
+  drawDistance: 'mid',
   tutorialSeen: false,
   dailyStreak: { count: 0, lastDate: null },
   goldenCatsCaught: 0,
@@ -25,7 +35,16 @@ export function loadSettings() {
   try {
     const raw = typeof localStorage !== 'undefined' && localStorage.getItem(KEY);
     if (!raw) return { ...DEFAULTS };
-    return { ...DEFAULTS, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+    const preset = GRAPHICS_PRESETS[parsed.graphicsQuality ?? DEFAULTS.graphicsQuality] ?? GRAPHICS_PRESETS.high;
+    return {
+      ...DEFAULTS,
+      postfxEnabled: preset.postfxEnabled,
+      shadowQuality: preset.shadowQuality,
+      vegetationDensity: preset.vegetationDensity,
+      drawDistance: preset.drawDistance,
+      ...parsed
+    };
   } catch { return { ...DEFAULTS }; }
 }
 

@@ -12,6 +12,7 @@ import AchievementsPanel, { AchievementToast } from './game/components/Achieveme
 import { evaluateAchievements, loadAchievements, saveAchievements, getAchievementById } from './game/achievements/achievements';
 import { haptic, setHapticsEnabled } from './game/haptics';
 import { loadSettings, saveSettings, checkDailyStreak, recordHighScore } from './game/persistence/userSettings';
+import { getGraphicsProfile } from './game/graphicsSettings';
 import PauseMenu from './game/components/PauseMenu';
 import SettingsPanel from './game/components/SettingsPanel';
 import TutorialOverlay from './game/components/TutorialOverlay';
@@ -65,6 +66,7 @@ export default function CatHunt3D() {
   const touchState = useRef({ joystick: { x: 0, y: 0, magnitude: 0, active: false }, joy: { x: 0, y: 0, magnitude: 0, active: false }, look: { dx: 0, dy: 0 } });
 
   const activeOutfit = useMemo(() => resolveActiveOutfit(settings, runtime.worldConfig.theme, achievementsState), [settings, runtime.worldConfig.theme, achievementsState]);
+  const graphicsProfile = useMemo(() => getGraphicsProfile(settings), [settings]);
   const visibleCats = useMemo(() => runtime.cats.filter((c) => !runtime.capturedCatIds.includes(c.id)).length, [runtime.cats, runtime.capturedCatIds]);
   const missionEnemyBonus = runtime.levelConfig?.modifiers?.enemyBonus ?? 0;
   const radarRange = runtime.levelConfig?.modifiers?.radarRange ?? 30;
@@ -238,9 +240,13 @@ export default function CatHunt3D() {
       playCaptureChime().catch(() => {});
       haptic.capture();
       const isGoldenCat = game3dRef.current?.isGolden?.(result.catId);
+      const comboText = captureResult.comboCount > 1 ? ` | x${captureResult.comboCount} Combo` : '';
+      const pointsText = `+${captureResult.pointsAwarded ?? 100} pts${comboText}`;
       if (isGoldenCat) {
         setSettings((s) => ({ ...s, goldenCatsCaught: (s.goldenCatsCaught ?? 0) + 1 }));
-        showFeedback('✨ ¡Michi DORADO! +500 pts');
+        showFeedback(`Michi DORADO ${pointsText}`);
+      } else {
+        showFeedback(pointsText);
       }
       grantAchievements('cat-caught', { catId: result.catId });
     } else {
@@ -269,7 +275,7 @@ export default function CatHunt3D() {
           onWorlds={() => setIsWorldPanelOpen(true)}
           onCollection={() => setIsCollectionOpen(true)}
           onHowToPlay={() => showFeedback('Mueve el joystick · Toca Atrapar al acercarte a un michi')}
-          onCredits={() => showFeedback('Creado por Bernard y Sarita 💜')}
+          onCredits={() => showFeedback('CAT HUNTER creado por Bernard y Sarita')}
           onAchievements={() => setIsAchievementsOpen(true)}
           onShare={() => setIsShareOpen(true)}
           onDifficulty={() => setIsDifficultyOpen(true)}
@@ -313,7 +319,7 @@ export default function CatHunt3D() {
         objectiveText={missionObjectiveText}
       />
 
-      <MinimalHUD capturedCount={runtime.capturedCatIds.length} totalCats={runtime.totalCats} timeLeft={runtime.timeLeft} isPaused={runtime.isPaused} onPause={() => runtime.setIsPaused((v) => !v)} onHome={() => setScreen('splash')} />
+      <MinimalHUD capturedCount={runtime.capturedCatIds.length} totalCats={runtime.totalCats} timeLeft={runtime.timeLeft} comboCount={runtime.comboCount} lastCatchResult={runtime.lastCatchResult} isPaused={runtime.isPaused} onPause={() => runtime.setIsPaused((v) => !v)} onHome={() => setScreen('splash')} />
 
       <Game3DCanvas
         ref={game3dRef}
@@ -327,6 +333,7 @@ export default function CatHunt3D() {
         worldTheme={runtime.worldConfig.theme}
         mapRadius={110}
         lowQuality={settings.graphicsQuality === 'low'}
+        graphicsProfile={graphicsProfile}
         outfitColor={activeOutfit?.dressColor}
         hatColor={activeOutfit?.hatColor}
         remotePlayers={remotePlayers}

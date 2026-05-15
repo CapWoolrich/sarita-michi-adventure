@@ -13,6 +13,7 @@ import RemotePlayer from './RemotePlayer';
 import PowerUps from './PowerUps';
 import BellEntity3D from './BellEntity3D';
 import { getEnemyConfig } from './enemies/biomeEnemies';
+import { GRAPHICS_PRESETS } from '../game/graphicsSettings';
 
 const DEBUG_INPUT = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugInput') === '1';
 const DISABLE_FX = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('nofx') === '1';
@@ -53,6 +54,7 @@ function SceneRuntime({
   hatColor,
   remotePlayers,
   onPowerUpCollect,
+  graphicsProfile,
   bells = [],
   activatedBellIds = [],
   onBellActivate
@@ -89,7 +91,7 @@ function SceneRuntime({
 
   return (
     <>
-      <WorldScene levelIndex={levelIndex} worldTheme={worldTheme} />
+      <WorldScene levelIndex={levelIndex} worldTheme={worldTheme} graphicsProfile={graphicsProfile} />
       {bells.map((bell) => (
         <BellEntity3D
           key={bell.id}
@@ -124,7 +126,7 @@ function SceneRuntime({
         <CaptureFX key={fx.id} position={[fx.x, fx.y, fx.z]} color={fx.color} onComplete={() => removeFX(fx.id)} />
       ))}
       <CharacterSarita3D characterRef={characterRef} animState="run" outfitColor={outfitColor} hatColor={hatColor} />
-      <PowerUps count={4} worldKey={`${worldTheme}-${levelIndex}`} playerPositionRef={playerPositionRef} onCollect={onPowerUpCollect} />
+      <PowerUps count={graphicsProfile?.powerUpCount ?? 4} worldKey={`${worldTheme}-${levelIndex}`} playerPositionRef={playerPositionRef} onCollect={onPowerUpCollect} />
       {remotePlayers.map((rp) => (
         <RemotePlayer key={rp.id} peerId={rp.id} name={rp.name} color={rp.color} outfitColor={rp.outfitColor || rp.color} position={{ x: rp.x ?? 0, z: rp.z ?? 0 }} rotation={rp.ry ?? 0} />
       ))}
@@ -149,6 +151,7 @@ export default forwardRef(function Game3DCanvas(
     worldTheme,
     mapRadius = 28,
     lowQuality = false,
+    graphicsProfile,
     enemyCount = 1,
     onEnemyHit,
     invulnUntilRef,
@@ -171,6 +174,7 @@ export default forwardRef(function Game3DCanvas(
   const playerPositionRef = useRef(null);
   const catLivePositionsRef = useRef({});
   const [capturedFXList, setCapturedFXList] = useState([]);
+  const activeGraphics = graphicsProfile ?? (lowQuality ? GRAPHICS_PRESETS.low : GRAPHICS_PRESETS.high);
 
   useEffect(() => {
     catLivePositionsRef.current = {};
@@ -209,7 +213,7 @@ export default forwardRef(function Game3DCanvas(
 
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
-      <Canvas shadows={{ type: THREE.PCFSoftShadowMap }} dpr={[1, 1.75]} gl={{ antialias: true, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping, outputColorSpace: THREE.SRGBColorSpace }} camera={{ fov: 55, near: 0.1, far: 900 }} onCreated={({ gl }) => { gl.toneMappingExposure = 1.05; }}>
+      <Canvas shadows={activeGraphics.shadowQuality !== 'off' ? { type: THREE.PCFSoftShadowMap } : false} dpr={activeGraphics.dpr} gl={{ antialias: activeGraphics.antialias, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping, outputColorSpace: THREE.SRGBColorSpace }} camera={{ fov: 55, near: 0.1, far: activeGraphics.cameraFar }} onCreated={({ gl }) => { gl.toneMappingExposure = 1.05; }}>
         <SceneRuntime
           touchState={stateRef}
           cats={cats}
@@ -235,11 +239,12 @@ export default forwardRef(function Game3DCanvas(
           hatColor={hatColor}
           remotePlayers={remotePlayers}
           onPowerUpCollect={onPowerUpCollect}
+          graphicsProfile={activeGraphics}
           bells={bells}
           activatedBellIds={activatedBellIds}
           onBellActivate={onBellActivate}
         />
-        {!DISABLE_FX && !lowQuality && <PostFX />}
+        {!DISABLE_FX && activeGraphics.postfxEnabled && <PostFX />}
       </Canvas>
       {DEBUG_INPUT && (
         <pre style={{ position: 'fixed', top: 88, right: 6, zIndex: 99, background: '#0009', color: '#fff', fontSize: 10 }}>

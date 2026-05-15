@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import { BIOMES } from './biomes/index.jsx';
+import { BIOMES, BiomeDensityProvider } from './biomes/index.jsx';
 import FallingAmbience from './biomes/FallingAmbience.jsx';
 import TerrainGround from './biomes/TerrainGround.jsx';
 import SkyFauna from './biomes/SkyFauna.jsx';
@@ -43,14 +43,19 @@ function SkyDome({ top, bot }) {
   );
 }
 
-export default function WorldScene({ worldTheme = 'mystic-forest' }) {
+export default function WorldScene({ worldTheme = 'mystic-forest', graphicsProfile = null }) {
   const theme = THEMES[worldTheme] ?? THEMES['mystic-forest'];
   const Biome = BIOMES[worldTheme] ?? BIOMES['mystic-forest'];
+  const fogNear = graphicsProfile?.fogNear ?? 80;
+  const fogFar = graphicsProfile?.fogFar ?? 380;
+  const shadowMapSize = graphicsProfile?.shadowMapSize ?? 1024;
+  const shadowsEnabled = (graphicsProfile?.shadowQuality ?? 'high') !== 'off';
+  const vegetationDensity = graphicsProfile?.vegetationMultiplier ?? 1;
 
   return (
     <>
       <color attach="background" args={[theme.skyBot]} />
-      <fog attach="fog" args={[theme.fog, 80, 380]} />
+      <fog attach="fog" args={[theme.fog, fogNear, fogFar]} />
       <SkyDome top={theme.skyTop} bot={theme.skyBot} />
 
       <ambientLight intensity={theme.ambient} color="#ffffff" />
@@ -59,9 +64,9 @@ export default function WorldScene({ worldTheme = 'mystic-forest' }) {
         position={[16, 28, 12]}
         intensity={theme.sunIntensity}
         color={theme.sun}
-        castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
+        castShadow={shadowsEnabled}
+        shadow-mapSize-width={shadowMapSize}
+        shadow-mapSize-height={shadowMapSize}
         shadow-camera-near={0.5}
         shadow-camera-far={200}
         shadow-camera-left={-100}
@@ -82,7 +87,9 @@ export default function WorldScene({ worldTheme = 'mystic-forest' }) {
         <meshStandardMaterial color={theme.pathColor} transparent opacity={0.4} roughness={0.9} />
       </mesh>
 
-      <Biome />
+      <BiomeDensityProvider density={vegetationDensity}>
+        <Biome />
+      </BiomeDensityProvider>
       <FallingAmbience biome={worldTheme} />
       <SkyFauna biome={worldTheme} />
     </>

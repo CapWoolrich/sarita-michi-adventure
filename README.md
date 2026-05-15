@@ -1,6 +1,6 @@
-# Sarita y los michi perdidos
+# CAT HUNTER
 
-Juego PWA 3D kawaii creado por Bernard y Sarita.
+Juego PWA 3D de caza y rescate de michis creado por Bernard y Sarita.
 
 ## Desarrollo
 

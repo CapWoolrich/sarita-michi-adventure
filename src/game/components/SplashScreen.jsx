@@ -185,10 +185,10 @@ export default function SplashScreen({
       <div className="kw-splash-v2-panel">
         <div className="kw-splash-v2-header">
           <h1 className="kw-splash-v2-title">
-            <span className="kw-splash-v2-line1">Sarita</span>
-            <span className="kw-splash-v2-line2">y los michi perdidos</span>
+            <span className="kw-splash-v2-line1">CAT</span>
+            <span className="kw-splash-v2-line2">HUNTER</span>
           </h1>
-          <p className="kw-splash-v2-tagline">Una aventura mágica para rescatar gatitos perdidos</p>
+          <p className="kw-splash-v2-tagline">Caza, rescata y domina mundos llenos de michis</p>
 
           {(dailyStreak > 0 || goldenCats > 0 || totalScore > 0) && (
             <div className="kw-splash-v2-stats">
@@ -246,7 +246,7 @@ export default function SplashScreen({
           </button>
         </div>
 
-        <div className="kw-splash-v2-footer">Creado por Bernard y Sarita 💜</div>
+        <div className="kw-splash-v2-footer">CAT HUNTER creado por Bernard y Sarita</div>
       </div>
     </div>
   );

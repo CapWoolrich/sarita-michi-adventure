@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon.svg'],
       manifest: {
-        name: 'Sarita y los michi perdidos',
-        short_name: 'Sarita',
-        description: 'Una aventura mágica para rescatar gatitos perdidos.',
+        name: 'CAT HUNTER',
+        short_name: 'CAT HUNTER',
+        description: 'Caza, rescata y domina mundos llenos de michis.',
         start_url: '/',
         scope: '/',
         display: 'standalone',
