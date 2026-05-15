@@ -12,6 +12,7 @@ import EnemyEntity from './enemies/EnemyEntity';
 import RemotePlayer from './RemotePlayer';
 import PowerUps from './PowerUps';
 import BellEntity3D from './BellEntity3D';
+import MissionChallengeLayer from './MissionChallengeLayer';
 import { getEnemyConfig } from './enemies/biomeEnemies';
 import { GRAPHICS_PRESETS } from '../game/graphicsSettings';
 
@@ -40,9 +41,14 @@ function SceneRuntime({
   onDebugUpdate,
   speedMode,
   jumpRequestedRef,
+  movementMultiplierRef,
   levelIndex,
   playerPositionRef,
   worldTheme,
+  missionType,
+  missionModifiers,
+  exitPortal,
+  onEscapeComplete,
   catLivePositionsRef,
   capturedFXList,
   removeFX,
@@ -60,7 +66,7 @@ function SceneRuntime({
   onBellActivate
 }) {
   const characterRef = useRef();
-  useRobloxLikeControls({ characterRef, touchState, isPaused, isLevelComplete, onDebugUpdate, speedMode, jumpRequestedRef });
+  useRobloxLikeControls({ characterRef, touchState, isPaused, isLevelComplete, onDebugUpdate, speedMode, jumpRequestedRef, movementMultiplierRef });
 
   useFrame(() => {
     if (!characterRef.current) return;
@@ -81,7 +87,7 @@ function SceneRuntime({
     }
     captureStateRef.current = { player: { x: p.x, y: p.y, z: p.z }, nearestCat, nearestDistance };
     playerPositionRef.current = { x: p.x, y: p.y, z: p.z };
-    onDebugUpdate?.({ player: { x: p.x.toFixed(2), y: p.y.toFixed(2), z: p.z.toFixed(2) }, nearestCatId: nearestCat?.id ?? null, nearestDistance: Number.isFinite(nearestDistance) ? Number(nearestDistance.toFixed(2)) : null, renderedCatIds: cats.filter((c) => !capturedCatIds.includes(c.id)).map((c) => c.id) });
+    onDebugUpdate?.({ player: { x: p.x.toFixed(2), y: p.y.toFixed(2), z: p.z.toFixed(2) }, nearestCatId: nearestCat?.id ?? null, nearestDistance: Number.isFinite(nearestDistance) ? Number(nearestDistance.toFixed(2)) : null, missionType, renderedCatIds: cats.filter((c) => !capturedCatIds.includes(c.id)).map((c) => c.id) });
     onNearestCatChange?.(nearestCat?.id ?? null, nearestDistance, nearestDistance <= 2.6);
   });
 
@@ -91,7 +97,18 @@ function SceneRuntime({
 
   return (
     <>
-      <WorldScene levelIndex={levelIndex} worldTheme={worldTheme} graphicsProfile={graphicsProfile} />
+      <WorldScene levelIndex={levelIndex} worldTheme={worldTheme} graphicsProfile={graphicsProfile} missionType={missionType} missionModifiers={missionModifiers} />
+      <MissionChallengeLayer
+        missionType={missionType}
+        modifiers={missionModifiers}
+        worldTheme={worldTheme}
+        playerPositionRef={playerPositionRef}
+        movementMultiplierRef={movementMultiplierRef}
+        exitPortal={exitPortal}
+        onEscapeComplete={onEscapeComplete}
+        onEnemyHit={onEnemyHit}
+        invulnUntilRef={invulnUntilRef}
+      />
       {bells.map((bell) => (
         <BellEntity3D
           key={bell.id}
@@ -126,7 +143,7 @@ function SceneRuntime({
         <CaptureFX key={fx.id} position={[fx.x, fx.y, fx.z]} color={fx.color} onComplete={() => removeFX(fx.id)} />
       ))}
       <CharacterSarita3D characterRef={characterRef} animState="run" outfitColor={outfitColor} hatColor={hatColor} />
-      <PowerUps count={graphicsProfile?.powerUpCount ?? 4} worldKey={`${worldTheme}-${levelIndex}`} playerPositionRef={playerPositionRef} onCollect={onPowerUpCollect} />
+      <PowerUps count={graphicsProfile?.powerUpCount ?? 4} worldKey={`${worldTheme}-${levelIndex}-${missionType}`} playerPositionRef={playerPositionRef} onCollect={onPowerUpCollect} />
       {remotePlayers.map((rp) => (
         <RemotePlayer key={rp.id} peerId={rp.id} name={rp.name} color={rp.color} outfitColor={rp.outfitColor || rp.color} position={{ x: rp.x ?? 0, z: rp.z ?? 0 }} rotation={rp.ry ?? 0} />
       ))}
@@ -149,6 +166,10 @@ export default forwardRef(function Game3DCanvas(
     levelIndex,
     onNearestCatChange,
     worldTheme,
+    missionType = 'rescue',
+    missionModifiers = {},
+    exitPortal = null,
+    onEscapeComplete,
     mapRadius = 28,
     lowQuality = false,
     graphicsProfile,
@@ -170,6 +191,7 @@ export default forwardRef(function Game3DCanvas(
   const stateRef = touchState || localTouchState;
   const captureStateRef = useRef({});
   const jumpRequestedRef = useRef(false);
+  const movementMultiplierRef = useRef(1);
   const [debugState, setDebugState] = useState({});
   const playerPositionRef = useRef(null);
   const catLivePositionsRef = useRef({});
@@ -179,6 +201,7 @@ export default forwardRef(function Game3DCanvas(
   useEffect(() => {
     catLivePositionsRef.current = {};
     captureStateRef.current = {};
+    movementMultiplierRef.current = 1;
     setCapturedFXList([]);
   }, [runtimeKey]);
 
@@ -189,7 +212,7 @@ export default forwardRef(function Game3DCanvas(
     return Array.from({ length: enemyCount }, (_, i) => {
       const a = (i / Math.max(1, enemyCount)) * Math.PI * 2 + 0.7;
       const r = 14 + i * 4;
-      return { type: base.type, color: base.color, speed: base.speed, spawn: [Math.cos(a) * r, 0, Math.sin(a) * r], patrolRadius: 6, detectionRadius: 7 };
+      return { type: base.type, color: base.color, speed: missionType === 'escape' ? base.speed * 1.18 : base.speed, spawn: [Math.cos(a) * r, 0, Math.sin(a) * r], patrolRadius: 6, detectionRadius: missionType === 'escape' ? 15 : 7 };
     });
   })();
   const spawnFX = (cat, pos) => {
@@ -202,6 +225,7 @@ export default forwardRef(function Game3DCanvas(
     isGolden: (catId) => cats.find((c) => c.id === catId)?.golden ?? false,
     getPlayerPosition: () => playerPositionRef.current,
     attemptCatch: () => {
+      if (missionType === 'escape') return { success: false, reason: 'escape_mode' };
       const { nearestCat, nearestDistance } = captureStateRef.current;
       if (!nearestCat) return { success: false, reason: 'no_cat' };
       if (nearestDistance > 2.6) return { success: false, reason: 'too_far', nearestCatId: nearestCat.id, distance: nearestDistance };
@@ -209,7 +233,7 @@ export default forwardRef(function Game3DCanvas(
       spawnFX(nearestCat, live);
       return { success: true, catId: nearestCat.id, distance: nearestDistance };
     }
-  }), [cats, capturedCatIds]);
+  }), [cats, capturedCatIds, missionType]);
 
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
@@ -225,9 +249,14 @@ export default forwardRef(function Game3DCanvas(
           onDebugUpdate={DEBUG_INPUT ? setDebugState : undefined}
           speedMode={speedMode}
           jumpRequestedRef={jumpRequestedRef}
+          movementMultiplierRef={movementMultiplierRef}
           levelIndex={levelIndex}
           playerPositionRef={playerPositionRef}
           worldTheme={worldTheme}
+          missionType={missionType}
+          missionModifiers={missionModifiers}
+          exitPortal={exitPortal}
+          onEscapeComplete={onEscapeComplete}
           catLivePositionsRef={catLivePositionsRef}
           capturedFXList={capturedFXList}
           removeFX={removeFX}
