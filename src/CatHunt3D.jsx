@@ -70,20 +70,22 @@ export default function CatHunt3D() {
   const visibleCats = useMemo(() => runtime.cats.filter((c) => !runtime.capturedCatIds.includes(c.id)).length, [runtime.cats, runtime.capturedCatIds]);
   const missionEnemyBonus = runtime.levelConfig?.modifiers?.enemyBonus ?? 0;
   const radarRange = runtime.levelConfig?.modifiers?.radarRange ?? 30;
+  const missionType = runtime.levelConfig?.missionType ?? 'rescue';
   const missionObjectiveText = useMemo(() => {
     const level = runtime.levelConfig ?? {};
-    const missionType = level.missionType ?? 'rescue';
+    const type = level.missionType ?? 'rescue';
     const requiredCats = level.objectives?.requiredCats ?? level.catCount ?? runtime.totalCats;
     const requiredBells = level.objectives?.requiredBells ?? 0;
-    if (missionType === 'golden') return 'Encuentra al Michi Dorado';
-    if (missionType === 'time_attack') return `Atrapa ${requiredCats} michis antes de que acabe el tiempo`;
-    if (missionType === 'exploration') return `Activa ${requiredBells} campanitas y rescata ${requiredCats} michis`;
-    if (missionType === 'careful') return `Rescata ${requiredCats} michis sin perder corazones`;
-    if (missionType === 'fog') return `Radar limitado: rescata ${requiredCats} michis`;
-    if (missionType === 'slow_zone') return `Cruza zonas lentas y rescata ${requiredCats} michis`;
-    if (missionType === 'city_hide') return `Busca escondites y rescata ${requiredCats} michis`;
-    if (missionType === 'mountain_jump') return `Usa saltos suaves y rescata ${requiredCats} michis`;
-    if (missionType === 'finale') return `Rescate final: ${requiredCats} michis y Michi Dorado`;
+    if (type === 'golden') return 'Encuentra al Michi Dorado';
+    if (type === 'time_attack') return `Atrapa ${requiredCats} michis antes de que acabe el tiempo`;
+    if (type === 'exploration') return `Activa ${requiredBells} campanitas y rescata ${requiredCats} michis`;
+    if (type === 'careful') return `Rescata ${requiredCats} michis sin perder corazones`;
+    if (type === 'fog') return `Radar limitado: rescata ${requiredCats} michis`;
+    if (type === 'slow_zone') return `Cruza zonas lentas y rescata ${requiredCats} michis`;
+    if (type === 'city_hide') return `Busca escondites y rescata ${requiredCats} michis`;
+    if (type === 'mountain_jump') return `Usa saltos suaves y rescata ${requiredCats} michis`;
+    if (type === 'escape') return 'Llega al portal o sobrevive 45 segundos';
+    if (type === 'finale') return `Rescate final: ${requiredCats} michis y Michi Dorado`;
     return `Atrapa ${requiredCats} michis`;
   }, [runtime.levelConfig, runtime.totalCats]);
 
@@ -146,7 +148,7 @@ export default function CatHunt3D() {
   useEffect(() => { if (isLoadingScreen) runtime.setIsPaused?.(true); }, [isLoadingScreen]);
   useEffect(() => {
     if (!isLoadingScreen) return;
-    const t = setTimeout(() => { setIsLoadingScreen(false); runtime.setIsPaused?.(false); }, 5000);
+    const t = setTimeout(() => { setIsLoadingScreen(false); runtime.setIsPaused?.(false); }, 2400);
     return () => clearTimeout(t);
   }, [isLoadingScreen]);
 
@@ -224,7 +226,12 @@ export default function CatHunt3D() {
 
   const onCatch = () => {
     if (runtime.isLevelComplete || runtime.isGameOver) return;
-    if (runtime.levelConfig?.missionType === 'exploration' && (runtime.missionState?.activatedBellIds?.length ?? 0) < (runtime.missionState?.requiredBells ?? 0)) {
+    if (missionType === 'escape') {
+      haptic.fail();
+      showFeedback('¡Corre al portal o sobrevive!');
+      return;
+    }
+    if (missionType === 'exploration' && (runtime.missionState?.activatedBellIds?.length ?? 0) < (runtime.missionState?.requiredBells ?? 0)) {
       haptic.fail();
       showFeedback('Activa las campanitas primero');
       return;
@@ -331,6 +338,10 @@ export default function CatHunt3D() {
         speedMode={runtime.speedMode}
         levelIndex={runtime.currentLevelIndex ?? 0}
         worldTheme={runtime.worldConfig.theme}
+        missionType={missionType}
+        missionModifiers={runtime.levelConfig?.modifiers ?? {}}
+        exitPortal={runtime.exitPortal}
+        onEscapeComplete={(source) => { haptic.success(); runtime.completeEscape?.(source); }}
         mapRadius={110}
         lowQuality={settings.graphicsQuality === 'low'}
         graphicsProfile={graphicsProfile}
@@ -342,13 +353,13 @@ export default function CatHunt3D() {
         onPowerUpCollect={onPowerUpCollect}
         invulnUntilRef={invulnUntilRef}
         onNearestCatChange={(catId, distance) => runtime.setNearestCat({ catId, distance })}
-        runtimeKey={`${runtime.worldId}-${runtime.levelId}-${runtime.totalCats}`}
+        runtimeKey={`${runtime.worldId}-${runtime.levelId}-${runtime.totalCats}-${missionType}`}
         bells={runtime.bells ?? []}
         activatedBellIds={runtime.missionState?.activatedBellIds ?? []}
         onBellActivate={(bellId) => { runtime.activateBell?.(bellId); haptic.success(); showFeedback('🔔 Campanita activada'); }}
       />
 
-      <MobileGameInputLayer touchState={touchState} speedMode={runtime.speedMode} isCatInCaptureRange={runtime.nearestCatDistance <= 2.6} onCatch={onCatch} onJump={() => game3dRef.current?.requestJump?.()} onToggleSpeed={runtime.toggleSpeedMode} />
+      <MobileGameInputLayer touchState={touchState} speedMode={runtime.speedMode} isCatInCaptureRange={missionType === 'escape' ? false : runtime.nearestCatDistance <= 2.6} onCatch={onCatch} onJump={() => game3dRef.current?.requestJump?.()} onToggleSpeed={runtime.toggleSpeedMode} />
 
       {feedback && <div className="catch-feedback">{feedback}</div>}
 
