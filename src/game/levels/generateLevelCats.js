@@ -85,6 +85,30 @@ function poissonSample(count, worldTheme, seed = 0) {
   return points;
 }
 
+function poissonSampleEscape(count, seed) {
+  const random = mulberry32(seed);
+  const points = [];
+  let i = 1;
+  while (points.length < count && i < count * 30) {
+    const a = random() * Math.PI * 2;
+    const r = 14 + random() * 22;  // 14..36m del centro
+    const x = Math.cos(a) * r;
+    const z = Math.sin(a) * r;
+    let valid = true;
+    for (const p of points) {
+      if (Math.hypot(p[0] - x, p[2] - z) < 5) { valid = false; break; }
+    }
+    if (valid) points.push([x, 0.95, z]);
+    i++;
+  }
+  while (points.length < count) {
+    const a = random() * Math.PI * 2;
+    const r = 14 + random() * 22;
+    points.push([Math.cos(a) * r, 0.95, Math.sin(a) * r]);
+  }
+  return points;
+}
+
 export function generateLevelCats(worldConfig, levelConfig) {
   const count = Number(levelConfig?.catCount ?? 0);
   if (count <= 0) return [];
@@ -93,7 +117,7 @@ export function generateLevelCats(worldConfig, levelConfig) {
   const seed = hashString(`${worldConfig?.id ?? 'world-1'}:${levelConfig?.id ?? 'nivel-1'}:${levelConfig?.missionType ?? 'rescue'}`);
   const random = mulberry32(seed + 31);
 
-  const positions = poissonSample(count, worldTheme, seed);
+  const positions = (levelConfig?.missionType === 'escape') ? poissonSampleEscape(count, seed) : poissonSample(count, worldTheme, seed);
   const mustHaveGolden = levelConfig?.forceGoldenCat || levelConfig?.missionType === 'golden' || levelConfig?.missionType === 'finale';
   const goldenIndex = mustHaveGolden
     ? Math.max(0, Math.floor(random() * count))
@@ -114,7 +138,7 @@ export function generateLevelCats(worldConfig, levelConfig) {
       anchor: [x, y, z],
       wanderRadius: 2.0 + (index % 3) * 0.4,
       phase: (index * 0.73) % (Math.PI * 2),
-      speed: 0.4 + ((index * 0.31) % 0.5),
+      speed: (levelConfig?.missionType === 'escape') ? 0.9 + ((index * 0.21) % 0.4) : 0.4 + ((index * 0.31) % 0.5),
       points: isGolden ? 500 : 100
     };
   });
