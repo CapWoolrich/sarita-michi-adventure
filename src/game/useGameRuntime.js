@@ -8,7 +8,7 @@ const tuneLevel = (level, difficulty) => {
   const isEscape = level?.missionType === 'escape';
   const cMult = DIFFICULTY_CAT_MULT[difficulty] ?? 1;
   const tMult = DIFFICULTY_TIME_MULT[difficulty] ?? 1;
-  const catCount = isEscape ? 0 : Math.max(3, Math.round((level?.catCount ?? 6) * cMult));
+  const catCount = isEscape ? (level?.catCount ?? 8) : Math.max(3, Math.round((level?.catCount ?? 6) * cMult));
   const timeLimit = isEscape ? (level?.objectives?.escapeSeconds ?? 45) : Math.max(20, Math.floor((level?.timeLimit ?? 90) * tMult));
   const baseNeed = level?.objectives?.requiredCats ?? catCount;
   const requiredCats = isEscape ? 0 : level?.objectives?.requiresGoldenCat ? baseNeed : Math.min(catCount, Math.max(1, Math.round(baseNeed * cMult)));
