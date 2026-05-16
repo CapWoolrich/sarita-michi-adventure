@@ -191,7 +191,7 @@ export default function ZombieCat({
         {/* CUERPO con misma forma cute que CatEntity3D */}
         <mesh position={[-0.08, -0.05, 0]} castShadow>
           <sphereGeometry args={[0.32, 18, 18]} />
-          <meshToonMaterial color={zombieColor} gradientMap={gradientMap} />
+          <meshToonMaterial color={zombieColor} gradientMap={gradientMap} emissive={'#4a6a30'} emissiveIntensity={0.4} />
         </mesh>
         {/* Parche de podredumbre */}
         <mesh position={[-0.16, 0.0, 0.22]}>
