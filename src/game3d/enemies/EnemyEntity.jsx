@@ -1115,7 +1115,7 @@ export default function EnemyEntity({
     const dx = target[0] - s.x;
     const dz = target[2] - s.z;
     const dist = Math.hypot(dx, dz);
-    const stepSpeed = mode === 'chase' ? speed * 1.4 : speed * 0.6;
+    const stepSpeed = mode === 'chase' ? speed * 1.8 : speed * 0.7;
 
     if (dist < 0.3 && mode === 'patrol') {
       s.target = pickPatrolTarget(spawn, patrolRadius);
