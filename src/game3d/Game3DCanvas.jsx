@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import WorldScene from './WorldScene';
 import CharacterSarita3D from './CharacterSarita3D';
 import CatEntity3D from './CatEntity3D';
+import ZombieCat from './ZombieCat';
 import CaptureFX from './CaptureFX';
 import useRobloxLikeControls from './useRobloxLikeControls';
 import PostFX from './PostFX';
@@ -126,6 +127,21 @@ function SceneRuntime({
         const cz = live?.z ?? cat.position[2];
         const distance = player ? Math.hypot(cx - player.x, cz - player.z) : null;
         const highlight = captureStateRef.current?.nearestCat?.id === cat.id && (distance ?? Infinity) <= 2.6;
+        if (missionType === 'escape') {
+          return (
+            <ZombieCat
+              key={cat.id}
+              cat={cat}
+              visible
+              highlight={highlight}
+              showDebugMarker={DEBUG_INPUT}
+              distance={distance}
+              mapRadius={mapRadius}
+              onPositionUpdate={handleCatPosition}
+              playerPositionRef={playerPositionRef}
+            />
+          );
+        }
         return (
           <CatEntity3D
             key={cat.id}

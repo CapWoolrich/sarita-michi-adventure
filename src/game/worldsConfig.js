@@ -21,7 +21,7 @@ const missionConfig = {
   slow_zone: { modifiers: { slowZones: true } },
   city_hide: { modifiers: { cityProps: true, nearestHint: true } },
   mountain_jump: { modifiers: { platforms: true } },
-  escape: { catCount: 0, timeLimit: 45, targetScore: 750, objectives: { escapeSeconds: 45, exitPortal: true }, modifiers: { escapeMode: true, exitPortal: true, enemyBonus: 2, chaseCats: true, extraFog: true } },
+  escape: { catCount: 8, timeLimit: 45, targetScore: 750, objectives: { escapeSeconds: 45, exitPortal: true }, modifiers: { escapeMode: true, exitPortal: true, enemyBonus: 2, chaseCats: true, extraFog: true, zombieMode: true } },
   finale: { catCount: 10, timeLimit: 110, targetScore: 1400, forceGoldenCat: true, objectives: { requiredCats: 10, requiresGoldenCat: true }, modifiers: { finale: true, enemyBonus: 1, celebration: true, goldenMood: true } }
 };
 
