@@ -2076,3 +2076,66 @@ body { overflow: hidden; }
   .kw-splash-v2-btn { padding: 8px 4px; font-size: 11px; min-height: 56px; }
   .kw-splash-v2-btn span:first-child { font-size: 20px; }
 }
+
+/* ============================================
+   WORLD LEVEL PICKER
+   ============================================ */
+.world-map-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.world-level-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 2px solid rgba(192, 132, 252, 0.2);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.18s ease;
+  text-align: left;
+  width: 100%;
+}
+.world-level-card:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: rgba(192, 132, 252, 0.5);
+  box-shadow: 0 8px 22px rgba(110, 63, 154, 0.18);
+}
+.world-level-card:active:not(:disabled) { transform: scale(0.98); }
+.world-level-done { background: linear-gradient(135deg, rgba(255, 240, 200, 0.9), rgba(255, 220, 240, 0.85)); border-color: rgba(255, 208, 102, 0.5); }
+.world-level-locked { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.6); }
+
+.world-level-number {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #c084fc, #ec4899);
+  color: white;
+  font-weight: 900;
+  font-size: 18px;
+  font-family: 'Georgia', serif;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(192, 132, 252, 0.35);
+}
+.world-level-locked .world-level-number { background: linear-gradient(135deg, #888, #aaa); }
+
+.world-level-info { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.world-level-info strong { font-size: 14px; color: #5a4880; }
+.world-level-info small { font-size: 12px; color: #8b5fb8; line-height: 1.3; }
+.world-level-meta { display: flex; gap: 10px; margin-top: 4px; font-size: 11px; color: #6a5878; font-weight: 700; }
+
+.world-level-stars {
+  display: flex;
+  gap: 2px;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.world-level-stars .on { color: #ffd066; text-shadow: 0 0 8px rgba(255, 208, 102, 0.7); }
+.world-level-stars .off { color: rgba(110, 63, 154, 0.18); }

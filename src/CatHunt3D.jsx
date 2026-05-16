@@ -326,7 +326,7 @@ export default function CatHunt3D() {
           chests={settings.chests ?? 0}
         />
         {feedback && <div className="catch-feedback">{feedback}</div>}
-        <WorldMapPanel isOpen={isWorldPanelOpen} worlds={runtime.worlds} currentWorldId={runtime.worldId} unlockedWorldIds={runtime.progress.unlockedWorldIds} progress={runtime.progress} onSelectWorld={(wid) => { runtime.goToWorld(wid); setIsWorldPanelOpen(false); setScreen('game'); }} onClose={() => setIsWorldPanelOpen(false)} onLockedWorld={() => showFeedback('Completa el mundo anterior para desbloquearlo')} />
+        <WorldMapPanel isOpen={isWorldPanelOpen} worlds={runtime.worlds} currentWorldId={runtime.worldId} unlockedWorldIds={runtime.progress.unlockedWorldIds} progress={runtime.progress} onSelectWorld={(wid) => { runtime.goToWorld(wid); setIsWorldPanelOpen(false); setScreen('game'); }} onSelectLevel={(wid, lid) => { runtime.startLevel(wid, lid); setIsWorldPanelOpen(false); setScreen('game'); }} onClose={() => setIsWorldPanelOpen(false)} onLockedWorld={() => showFeedback('Completa el nivel anterior para desbloquearlo')} />
         <CatCollection isOpen={isCollectionOpen} worlds={runtime.worlds} progress={runtime.progress} onClose={() => setIsCollectionOpen(false)} />
         <AchievementsPanel isOpen={isAchievementsOpen} achievements={achievementsState} onClose={() => setIsAchievementsOpen(false)} />
         <Wardrobe isOpen={isWardrobeOpen} currentOutfitId={settings.outfitOverride ?? 'auto'} achievements={achievementsState} totalCats={achievementsState?.totalCaught ?? 0} completedLevels={completedLevels} onSelect={(id) => { setSettings((s) => ({ ...s, outfitOverride: id })); setIsWardrobeOpen(false); }} onClose={() => setIsWardrobeOpen(false)} />
@@ -397,7 +397,7 @@ export default function CatHunt3D() {
       {feedback && <div className="catch-feedback">{feedback}</div>}
       <RewardToast reward={rewardToast} onClose={() => setRewardToast(null)} />
 
-      <WorldMapPanel isOpen={isWorldPanelOpen} worlds={runtime.worlds} currentWorldId={runtime.worldId} unlockedWorldIds={runtime.progress.unlockedWorldIds} progress={runtime.progress} onSelectWorld={(wid) => { runtime.goToWorld(wid); setIsWorldPanelOpen(false); }} onClose={() => setIsWorldPanelOpen(false)} onLockedWorld={() => showFeedback('Completa el mundo anterior para desbloquearlo')} />
+      <WorldMapPanel isOpen={isWorldPanelOpen} worlds={runtime.worlds} currentWorldId={runtime.worldId} unlockedWorldIds={runtime.progress.unlockedWorldIds} progress={runtime.progress} onSelectWorld={(wid) => { runtime.goToWorld(wid); setIsWorldPanelOpen(false); }} onSelectLevel={(wid, lid) => { runtime.startLevel(wid, lid); setIsWorldPanelOpen(false); }} onClose={() => setIsWorldPanelOpen(false)} onLockedWorld={() => showFeedback('Completa el nivel anterior para desbloquearlo')} />
 
       <LevelTransition open={isTransitionOpen} score={runtime.score} capturedCount={runtime.capturedCatIds.length} totalCats={runtime.totalCats} targetScore={runtime.levelConfig.targetScore} onAdvance={onTransitionAdvance} />
       <GameOverPanel isOpen={runtime.isGameOver} message={runtime.missionState?.missionMessage || 'Intenta de nuevo'} onRestart={() => runtime.restartLevel?.()} onHome={() => setScreen('splash')} />
