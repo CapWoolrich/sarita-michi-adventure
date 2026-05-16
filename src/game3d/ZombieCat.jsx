@@ -2,7 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 
-const BASE_SCALE = 2.0;
+const BASE_SCALE = 2.6;
 const FOG_TRAIL_LENGTH = 14;
 
 /**
@@ -108,7 +108,7 @@ export default function ZombieCat({
   const zombieColor = useMemo(() => {
     const base = new THREE.Color(cat.color || '#ffd6c5');
     const zombie = new THREE.Color('#86a86b');
-    return base.clone().lerp(zombie, 0.55).getStyle();
+    return base.clone().lerp(zombie, 0.85).getStyle();
   }, [cat.color]);
   const zombieAccent = useMemo(() => {
     const c = new THREE.Color(zombieColor).multiplyScalar(0.65);
@@ -164,7 +164,7 @@ export default function ZombieCat({
     ref.current.scale.setScalar(BASE_SCALE * pulse);
 
     if (auraRef.current) {
-      auraRef.current.material.opacity = 0.35 + Math.sin(t * 3) * 0.12;
+      auraRef.current.material.opacity = 0.55 + Math.sin(t * 3) * 0.20;
       auraRef.current.scale.setScalar(1 + Math.sin(t * 1.5) * 0.05);
     }
     if (eyeGlowRef.current) {
@@ -180,7 +180,7 @@ export default function ZombieCat({
       <group ref={ref} position={[anchor[0], anchor[1], anchor[2]]} scale={[BASE_SCALE, BASE_SCALE, BASE_SCALE]}>
         {/* Aura verde malsana en suelo */}
         <mesh ref={auraRef} position={[0, -0.42, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[1.1, 32]} />
+          <circleGeometry args={[1.6, 32]} />
           <meshBasicMaterial color="#5fa05a" transparent opacity={0.35} toneMapped={false} />
         </mesh>
         <mesh position={[0, -0.41, 0]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -240,11 +240,11 @@ export default function ZombieCat({
 
         {/* OJOS ROJOS grandes amenazantes */}
         <mesh position={[0.43, 0.36, 0.16]}>
-          <sphereGeometry args={[0.09, 12, 10]} />
+          <sphereGeometry args={[0.12, 12, 10]} />
           <meshBasicMaterial color="#ff2020" toneMapped={false} />
         </mesh>
         <mesh position={[0.43, 0.36, -0.16]}>
-          <sphereGeometry args={[0.09, 12, 10]} />
+          <sphereGeometry args={[0.12, 12, 10]} />
           <meshBasicMaterial color="#ff2020" toneMapped={false} />
         </mesh>
         {/* Pupila negra pequeña */}

@@ -228,7 +228,7 @@ export default forwardRef(function Game3DCanvas(
     return Array.from({ length: enemyCount }, (_, i) => {
       const a = (i / Math.max(1, enemyCount)) * Math.PI * 2 + 0.7;
       const r = 14 + i * 4;
-      return { type: base.type, color: base.color, speed: missionType === 'escape' ? base.speed * 1.18 : base.speed, spawn: [Math.cos(a) * r, 0, Math.sin(a) * r], patrolRadius: 6, detectionRadius: missionType === 'escape' ? 15 : 7 };
+      return { type: base.type, color: base.color, speed: missionType === 'escape' ? base.speed * 1.5 : base.speed * 1.3, spawn: [Math.cos(a) * r, 0, Math.sin(a) * r], patrolRadius: 35, detectionRadius: missionType === 'escape' ? 25 : 18 };
     });
   })();
   const spawnFX = (cat, pos) => {
