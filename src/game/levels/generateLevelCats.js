@@ -89,21 +89,22 @@ function poissonSampleEscape(count, seed) {
   const random = mulberry32(seed);
   const points = [];
   let i = 1;
+  // SPAWN CERCA: 8..20m del centro — visibles desde el inicio
   while (points.length < count && i < count * 30) {
     const a = random() * Math.PI * 2;
-    const r = 14 + random() * 22;  // 14..36m del centro
+    const r = 8 + random() * 12;
     const x = Math.cos(a) * r;
     const z = Math.sin(a) * r;
     let valid = true;
     for (const p of points) {
-      if (Math.hypot(p[0] - x, p[2] - z) < 5) { valid = false; break; }
+      if (Math.hypot(p[0] - x, p[2] - z) < 4) { valid = false; break; }
     }
     if (valid) points.push([x, 0.95, z]);
     i++;
   }
   while (points.length < count) {
     const a = random() * Math.PI * 2;
-    const r = 14 + random() * 22;
+    const r = 8 + random() * 12;
     points.push([Math.cos(a) * r, 0.95, Math.sin(a) * r]);
   }
   return points;
