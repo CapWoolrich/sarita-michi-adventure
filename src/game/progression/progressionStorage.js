@@ -1,14 +1,17 @@
 import { WORLDS } from '../worldsConfig';
 
 const KEY = 'michi-premium-progress-v1';
-const defaultProgress = () => ({ currentWorldId: WORLDS[0].id, currentLevelId: WORLDS[0].levels[0].id, unlockedWorldIds: [WORLDS[0].id], levels: {} });
+const defaultProgress = () => ({ currentWorldId: WORLDS[0].id, currentLevelId: WORLDS[0].levels[0].id, unlockedWorldIds: WORLDS.map((w) => w.id), levels: {} });
 const isValid = (p) => !!p && WORLDS.some((w) => w.id === p.currentWorldId) && WORLDS.some((w) => w.id === p.currentWorldId && w.levels.some((l) => l.id === p.currentLevelId));
 
 export function loadProgress() {
   try {
     const parsed = JSON.parse(localStorage.getItem(KEY) || 'null');
     if (!isValid(parsed)) return defaultProgress();
-    return { ...defaultProgress(), ...parsed };
+    // Asegurar que todos los mundos estén desbloqueados
+    const merged = { ...defaultProgress(), ...parsed };
+    merged.unlockedWorldIds = WORLDS.map((w) => w.id);
+    return merged;
   } catch { return defaultProgress(); }
 }
 export const saveProgress = (p) => localStorage.setItem(KEY, JSON.stringify(p));
