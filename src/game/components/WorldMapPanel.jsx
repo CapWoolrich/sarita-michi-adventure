@@ -45,16 +45,8 @@ export default function WorldMapPanel({
     }
   };
 
-  const handleLevelClick = (worldId, levelId, levelIndex) => {
-    // Solo permitir si el nivel anterior está completo (o es el primero)
-    if (levelIndex > 0) {
-      const prevLevel = expandedWorld.levels[levelIndex - 1];
-      const prevDone = progress.levels?.[`${worldId}:${prevLevel.id}`]?.completed;
-      if (!prevDone) {
-        onLockedWorld?.();
-        return;
-      }
-    }
+  const handleLevelClick = (worldId, levelId) => {
+    // Cualquier nivel se puede elegir directo (todos desbloqueados)
     if (onSelectLevel) {
       onSelectLevel(worldId, levelId);
     } else {
@@ -106,8 +98,7 @@ export default function WorldMapPanel({
             <div className="world-map-levels">
               {expandedWorld.levels.map((lvl, i) => {
                 const levelDone = progress.levels?.[`${expandedWorld.id}:${lvl.id}`]?.completed;
-                const prevDone = i === 0 || progress.levels?.[`${expandedWorld.id}:${expandedWorld.levels[i - 1].id}`]?.completed;
-                const locked = !prevDone;
+                const locked = false;  // todos los niveles desbloqueados
                 const score = progress.levels?.[`${expandedWorld.id}:${lvl.id}`]?.score ?? 0;
                 const stars = progress.levels?.[`${expandedWorld.id}:${lvl.id}`]?.stars ?? 0;
                 const icon = MISSION_ICONS[lvl.missionType] ?? '🐾';
@@ -116,7 +107,7 @@ export default function WorldMapPanel({
                     key={lvl.id}
                     data-game-ui="true"
                     className={`world-level-card ${levelDone ? 'world-level-done' : ''} ${locked ? 'world-level-locked' : ''}`}
-                    onClick={() => handleLevelClick(expandedWorld.id, lvl.id, i)}
+                    onClick={() => handleLevelClick(expandedWorld.id, lvl.id)}
                     disabled={locked}
                   >
                     <div className="world-level-number">{i + 1}</div>
