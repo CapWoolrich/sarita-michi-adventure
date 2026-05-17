@@ -86,7 +86,9 @@ export default function ZombieCat({
   distance = null,
   onPositionUpdate,
   mapRadius = 56,
-  playerPositionRef
+  playerPositionRef,
+  onHit,
+  invulnUntilRef
 }) {
   const ref = useRef();
   const tailRef = useRef();
@@ -139,6 +141,12 @@ export default function ZombieCat({
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
         ref.current.rotation.y += diff * 0.1;
+      }
+      // Detectar contacto con jugador → quitar vida (con cooldown invulnerable)
+      const now = Date.now();
+      const invulnUntil = invulnUntilRef?.current ?? 0;
+      if (dist < 1.8 && now > invulnUntil) {
+        onHit?.(now);
       }
     }
 
