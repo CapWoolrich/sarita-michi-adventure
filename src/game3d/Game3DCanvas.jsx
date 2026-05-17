@@ -139,6 +139,8 @@ function SceneRuntime({
               mapRadius={mapRadius}
               onPositionUpdate={handleCatPosition}
               playerPositionRef={playerPositionRef}
+              onHit={onEnemyHit}
+              invulnUntilRef={invulnUntilRef}
             />
           );
         }
