@@ -168,7 +168,7 @@ export default function MissionChallengeLayer({ missionType, modifiers = {}, wor
       {showCityProps && <CityProps />}
       {showMountainPlatforms && <MountainPlatforms />}
       {isEscape && exitPortal && <EscapePortal portal={exitPortal} playerPositionRef={playerPositionRef} onEscapeComplete={onEscapeComplete} />}
-      {isEscape && [0, 1, 2].map((index) => <ChaseMichi key={`chase-michi-${index}`} index={index} playerPositionRef={playerPositionRef} onEnemyHit={onEnemyHit} invulnUntilRef={invulnUntilRef} />)}
+      {/* ChaseMichi REMOVIDO — los ZombieCats spawneados por generateLevelCats manejan esto */}
     </group>
   );
 }
