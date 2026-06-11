@@ -1,6 +1,8 @@
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import CharacterAccessories from './premium/CharacterAccessories';
+import { KartMesh } from './premium/MountedVehicle';
 
 /** Nameplate barato: canvas → CanvasTexture → sprite (sin drei Html ni fuentes externas). */
 function useNameTexture(name) {
@@ -43,6 +45,10 @@ export default function RemotePlayer({
   color = '#ffd6c5',
   outfitColor = '#c084fc',
   hatColor = null,
+  auraColor = null,
+  characterId = null,
+  zone = 'outside',
+  vehicle = false,
   anim = 'idle',
   position,
   rotation = 0
@@ -50,7 +56,7 @@ export default function RemotePlayer({
   const groupRef = useRef();
   const bodyRef = useRef();
   const lastPosRef = useRef({ x: position?.x ?? 0, z: position?.z ?? 0, ry: rotation });
-  const nameTexture = useNameTexture(name);
+  const nameTexture = useNameTexture(zone === 'interior' ? `🏠 ${name ?? ''}` : name);
   const accentColor = hatColor || color;
 
   useFrame(({ clock }) => {
@@ -100,12 +106,27 @@ export default function RemotePlayer({
           <sphereGeometry args={[0.18, 12, 10]} />
           <meshStandardMaterial color={accentColor} emissive={accentColor} emissiveIntensity={0.2} />
         </mesh>
+        {/* Accesorios del personaje remoto */}
+        <CharacterAccessories characterId={characterId} scale={0.8} />
       </group>
+      {/* Kart si el peer está en modo vehículo */}
+      {vehicle && (
+        <group position={[0, -0.5, 0]}>
+          <KartMesh color={accentColor} />
+        </group>
+      )}
       {/* Anillo de jugador remoto en suelo */}
       <mesh position={[0, -0.46, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.5, 0.7, 24]} />
         <meshBasicMaterial color={accentColor} transparent opacity={0.6} toneMapped={false} />
       </mesh>
+      {/* Aura sincronizada (personaje o accesorio) */}
+      {auraColor && (
+        <mesh position={[0, -0.45, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.78, 0.98, 26]} />
+          <meshBasicMaterial color={auraColor} transparent opacity={0.4} toneMapped={false} />
+        </mesh>
+      )}
       {/* Nombre flotante */}
       {nameTexture && (
         <sprite position={[0, 1.75, 0]} scale={[1.7, 0.42, 1]}>

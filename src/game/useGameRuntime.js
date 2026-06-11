@@ -14,13 +14,22 @@ const tuneLevel = (level, difficulty) => {
   const requiredCats = isEscape ? 0 : level?.objectives?.requiresGoldenCat ? baseNeed : Math.min(catCount, Math.max(1, Math.round(baseNeed * cMult)));
   return { ...level, catCount, timeLimit, objectives: { ...(level?.objectives ?? {}), requiredCats }, modifiers: { ...(level?.modifiers ?? {}) } };
 };
-const initialMission = (level) => ({ activatedBellIds: [], requiredBells: level?.objectives?.requiredBells ?? 0, goldenCatCaptured: false, isGameOver: false, missionMessage: '' });
+const initialMission = (level) => ({ activatedBellIds: [], requiredBells: level?.objectives?.requiredBells ?? 0, goldenCatCaptured: false, isGameOver: false, missionMessage: '', quest: { houses: [], items: 0, phase: 'collect' }, checkpointsHit: [] });
+const QUEST_MISSIONS = ['city_quest', 'vehicle_dash'];
 const makeBellSet = (worldId, levelId, count = 0) => Array.from({ length: count }, (_, i) => {
   const base = Array.from(`${worldId}-${levelId}`).reduce((sum, char, idx) => sum + char.charCodeAt(0) * (idx + 11), 0);
   const angle = (i / Math.max(1, count)) * Math.PI * 2 + (base % 9) * 0.09;
   const radius = 18 + ((base + i * 23) % 36);
   return { id: `${worldId}-${levelId}-bell-${i + 1}`, position: [Math.cos(angle) * radius, 1.05, Math.sin(angle) * radius] };
 });
+const makeCheckpoints = (worldId, levelId, count = 3) => {
+  const base = Array.from(`${worldId}-${levelId}-dash`).reduce((sum, char, idx) => sum + char.charCodeAt(0) * (idx + 9), 0);
+  return Array.from({ length: count }, (_, i) => {
+    const angle = (i / Math.max(1, count)) * Math.PI * 2 + (base % 11) * 0.17;
+    const radius = 26 + ((base + i * 29) % 22);
+    return { id: `${worldId}-${levelId}-cp-${i + 1}`, position: [Math.cos(angle) * radius, 1.4, Math.sin(angle) * radius] };
+  });
+};
 const makeExitPortal = (worldId, levelId, missionType) => {
   if (missionType !== 'escape') return null;
   const base = Array.from(`${worldId}-${levelId}-exit`).reduce((sum, char, idx) => sum + char.charCodeAt(0) * (idx + 7), 0);
@@ -78,11 +87,13 @@ export default function useGameRuntime() {
   const powerStateRef = useRef(EMPTY_POWER);
   const [health, setHealth] = useState(() => makeInitialHealth(difficulty));
   const [missionState, setMissionState] = useState(() => initialMission(levelConfig));
+  const [levelNonce, setLevelNonce] = useState(0);
   const totalCats = cats.length;
   const currentLevelIndex = Math.max(0, worldConfig.levels.findIndex((l) => l.id === levelId));
   const isLastLevelInWorld = currentLevelIndex === worldConfig.levels.length - 1;
   const bells = useMemo(() => levelConfig.missionType === 'exploration' ? makeBellSet(worldId, levelId, levelConfig.objectives?.requiredBells ?? 0) : [], [levelConfig.missionType, levelConfig.objectives?.requiredBells, levelId, worldId]);
   const exitPortal = useMemo(() => makeExitPortal(worldId, levelId, levelConfig.missionType), [levelConfig.missionType, levelId, worldId]);
+  const checkpoints = useMemo(() => levelConfig.missionType === 'vehicle_dash' ? makeCheckpoints(worldId, levelId, levelConfig.objectives?.checkpoints ?? 3) : [], [levelConfig.missionType, levelConfig.objectives?.checkpoints, levelId, worldId]);
   const now = Date.now();
   const isTurboActive = powerState.turboUntil > now;
   const isMagnetActive = powerState.magnetUntil > now;
@@ -131,6 +142,7 @@ export default function useGameRuntime() {
     setCapturedCatIds([]); setScore(0); setTimeLeft(nextLevel.timeLimit); setIsPaused(false); setIsLevelComplete(false);
     comboStateRef.current = EMPTY_COMBO; setComboCount(0); setComboExpiresAt(0); powerStateRef.current = EMPTY_POWER; setPowerState(EMPTY_POWER);
     setNearestCatIdValue(null); setNearestCatDistance(Infinity); setLastCatchResult(null); setHealth(makeInitialHealth(difficulty)); setMissionState(initialMission(nextLevel));
+    setLevelNonce((n) => n + 1);
     setProgress((prev) => { const p = setCurrentWorldLevel(prev, nextWorld.id, nextLevel.id); saveProgress(p); return p; });
   }, [difficulty]);
 
@@ -152,6 +164,50 @@ export default function useGameRuntime() {
     completeLevel(finalScore);
   }, [completeLevel, isLevelComplete, levelConfig.missionType, missionState.isGameOver, score, timeLeft]);
 
+  // Completa misiones tipo quest (city_quest: volver a la plaza; vehicle_dash: 3 anillos)
+  const completeQuest = useCallback((source = 'quest') => {
+    if (isLevelComplete || missionState.isGameOver || !QUEST_MISSIONS.includes(levelConfig.missionType)) return;
+    const bonus = source === 'dash' ? 320 : 280;
+    const finalScore = score + bonus + Math.max(0, timeLeft) * 5;
+    setScore(finalScore);
+    setMissionState((s) => ({ ...s, missionMessage: source === 'dash' ? '¡Carrera completada!' : '¡Misión de ciudad completada!' }));
+    completeLevel(finalScore);
+  }, [completeLevel, isLevelComplete, levelConfig.missionType, missionState.isGameOver, score, timeLeft]);
+
+  // Progreso de city_quest: casas visitadas (dedupe por id) + tesoros encontrados
+  const recordQuestEvent = useCallback((kind, id) => {
+    if (levelConfig.missionType !== 'city_quest' || isLevelComplete || missionState.isGameOver) return null;
+    const needHouses = levelConfig.objectives?.questHouses ?? 2;
+    const needItems = levelConfig.objectives?.questItems ?? 2;
+    const quest = missionState.quest ?? { houses: [], items: 0, phase: 'collect' };
+    let houses = quest.houses;
+    let items = quest.items;
+    if (kind === 'house') {
+      if (houses.includes(id)) return { houses: houses.length, items, phase: quest.phase, needHouses, needItems, duplicate: true };
+      houses = [...houses, id];
+    } else if (kind === 'item') {
+      items += 1;
+    } else {
+      return null;
+    }
+    const phase = quest.phase === 'collect' && houses.length >= needHouses && items >= needItems ? 'return' : quest.phase;
+    setMissionState((s) => ({
+      ...s,
+      quest: { houses, items, phase },
+      missionMessage: phase === 'return' ? '¡Vuelve a la plaza!' : s.missionMessage
+    }));
+    return { houses: houses.length, items, phase, needHouses, needItems };
+  }, [isLevelComplete, levelConfig.missionType, levelConfig.objectives, missionState]);
+
+  // Checkpoints de vehicle_dash (dedupe por id; completa vía efecto)
+  const hitCheckpoint = useCallback((cpId) => {
+    if (levelConfig.missionType !== 'vehicle_dash' || isLevelComplete || missionState.isGameOver) return null;
+    if ((missionState.checkpointsHit ?? []).includes(cpId)) return null;
+    const count = (missionState.checkpointsHit?.length ?? 0) + 1;
+    setMissionState((s) => s.checkpointsHit.includes(cpId) ? s : { ...s, checkpointsHit: [...s.checkpointsHit, cpId] });
+    return { count, total: levelConfig.objectives?.checkpoints ?? 3 };
+  }, [isLevelComplete, levelConfig.missionType, levelConfig.objectives, missionState]);
+
   const captureCat = useCallback((catId) => {
     if (levelConfig.missionType === 'escape') return { success: false, reason: 'escape_mode' };
     if (!catId || !cats.some((c) => c.id === catId)) return { success: false, reason: 'invalid_cat' };
@@ -168,7 +224,8 @@ export default function useGameRuntime() {
       const next = [...prev, catId]; const nextScore = score + comboReward.pointsAwarded; const goldenCatCaptured = missionState.goldenCatCaptured || !!cat?.golden;
       setScore(nextScore); setLastCatchResult({ success: true, catId, golden: !!cat?.golden, ...comboReward }); setMissionState((s) => ({ ...s, goldenCatCaptured, missionMessage: '' })); setHealth((h) => ({ ...h, current: Math.min(h.max, h.current + HEAL_PER_CAT + comboReward.healBonus) }));
       const need = levelConfig.objectives?.requiredCats ?? cats.length;
-      const done = levelConfig.missionType === 'golden' ? goldenCatCaptured : levelConfig.objectives?.requiresGoldenCat ? next.length >= need && goldenCatCaptured : next.length >= need;
+      // En misiones quest los michis son bonus: el nivel se completa por la quest
+      const done = QUEST_MISSIONS.includes(levelConfig.missionType) ? false : levelConfig.missionType === 'golden' ? goldenCatCaptured : levelConfig.objectives?.requiresGoldenCat ? next.length >= need && goldenCatCaptured : next.length >= need;
       if (done) completeLevel(nextScore);
       return next;
     });
@@ -210,6 +267,11 @@ export default function useGameRuntime() {
   }, [comboExpiresAt]);
   useEffect(() => { if (isPaused || isLevelComplete || missionState.isGameOver || isClockFrozen) return; const t = setInterval(() => setTimeLeft((v) => (v <= 1 ? 0 : v - 1)), 1000); return () => clearInterval(t); }, [isPaused, isLevelComplete, missionState.isGameOver, isClockFrozen]);
   useEffect(() => { if (timeLeft === 0 && !isLevelComplete) { if (levelConfig.missionType === 'escape') completeEscape('survival'); else { setIsPaused(true); setMissionState((s) => ({ ...s, isGameOver: true, missionMessage: 'Se acabó el tiempo' })); } } }, [completeEscape, isLevelComplete, levelConfig.missionType, timeLeft]);
+  useEffect(() => {
+    if (levelConfig.missionType !== 'vehicle_dash' || isLevelComplete || missionState.isGameOver) return;
+    const need = levelConfig.objectives?.checkpoints ?? 3;
+    if ((missionState.checkpointsHit?.length ?? 0) >= need) completeQuest('dash');
+  }, [completeQuest, isLevelComplete, levelConfig.missionType, levelConfig.objectives, missionState.checkpointsHit, missionState.isGameOver]);
 
-  return useMemo(() => ({ worlds: WORLDS, progress, worldId, levelId, currentLevelIndex, isLastLevelInWorld, worldConfig, levelConfig, cats, totalCats, capturedCatIds, score, timeLeft, isPaused, isLevelComplete, isGameOver: missionState.isGameOver, nearestCatId, nearestCatDistance, lastCatchResult, comboCount, comboExpiresAt, comboWindowMs: COMBO_WINDOW_MS, speedMode, powerState, isTurboActive, isMagnetActive, isClockFrozen, isScoreMultiplierActive, health, missionState, bells, exitPortal, takeDamage, difficulty, setDifficulty, startLevel, captureCat, completeLevel, completeEscape, restartLevel, goToNextLevel, goToWorld, setNearestCat, setLastCatchResult, activateBell, addScore, addTime, activatePowerUp, toggleSpeedMode, setIsPaused }), [progress, worldId, levelId, currentLevelIndex, isLastLevelInWorld, worldConfig, levelConfig, cats, totalCats, capturedCatIds, score, timeLeft, isPaused, isLevelComplete, missionState, bells, exitPortal, nearestCatId, nearestCatDistance, lastCatchResult, comboCount, comboExpiresAt, speedMode, powerState, isTurboActive, isMagnetActive, isClockFrozen, isScoreMultiplierActive, health, takeDamage, difficulty, startLevel, captureCat, completeLevel, completeEscape, restartLevel, goToNextLevel, goToWorld, setNearestCat, activateBell, addScore, addTime, activatePowerUp, toggleSpeedMode]);
+  return useMemo(() => ({ worlds: WORLDS, progress, worldId, levelId, currentLevelIndex, isLastLevelInWorld, worldConfig, levelConfig, cats, totalCats, capturedCatIds, score, timeLeft, isPaused, isLevelComplete, isGameOver: missionState.isGameOver, nearestCatId, nearestCatDistance, lastCatchResult, comboCount, comboExpiresAt, comboWindowMs: COMBO_WINDOW_MS, speedMode, powerState, isTurboActive, isMagnetActive, isClockFrozen, isScoreMultiplierActive, health, missionState, bells, exitPortal, checkpoints, levelNonce, takeDamage, difficulty, setDifficulty, startLevel, captureCat, completeLevel, completeEscape, completeQuest, recordQuestEvent, hitCheckpoint, restartLevel, goToNextLevel, goToWorld, setNearestCat, setLastCatchResult, activateBell, addScore, addTime, activatePowerUp, toggleSpeedMode, setIsPaused }), [progress, worldId, levelId, currentLevelIndex, isLastLevelInWorld, worldConfig, levelConfig, cats, totalCats, capturedCatIds, score, timeLeft, isPaused, isLevelComplete, missionState, bells, exitPortal, checkpoints, levelNonce, nearestCatId, nearestCatDistance, lastCatchResult, comboCount, comboExpiresAt, speedMode, powerState, isTurboActive, isMagnetActive, isClockFrozen, isScoreMultiplierActive, health, takeDamage, difficulty, startLevel, captureCat, completeLevel, completeEscape, completeQuest, recordQuestEvent, hitCheckpoint, restartLevel, goToNextLevel, goToWorld, setNearestCat, activateBell, addScore, addTime, activatePowerUp, toggleSpeedMode]);
 }

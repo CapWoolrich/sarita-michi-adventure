@@ -10,7 +10,8 @@
  * Mensaje protocol:
  *  { type: 'pos', x, z, ry, anim }
  *  { type: 'capture', catId, by }
- *  { type: 'hello', name, outfitId, color, outfitColor, hatColor, characterId }
+ *  { type: 'hello', name, outfitId, color, outfitColor, hatColor, characterId, auraColor }
+ *  { type: 'action', action, id }  // chest_open | house_enter | house_exit | portal_use | vehicle_on | vehicle_off
  *  { type: 'world', worldId, levelId }   // host comparte nivel actual
  */
 // PeerJS se carga dinámicamente para no bloquear la app si falla el CDN
@@ -112,6 +113,13 @@ export class PeerSession {
       } else if (msg.type === 'hello') {
         p.name = msg.name; p.color = msg.color; p.outfitId = msg.outfitId;
         p.outfitColor = msg.outfitColor; p.hatColor = msg.hatColor; p.characterId = msg.characterId;
+        p.auraColor = msg.auraColor;
+        this.players.set(peerId, p);
+      } else if (msg.type === 'action') {
+        if (msg.action === 'house_enter') p.zone = 'interior';
+        else if (msg.action === 'house_exit') p.zone = 'outside';
+        else if (msg.action === 'vehicle_on') p.vehicle = true;
+        else if (msg.action === 'vehicle_off') p.vehicle = false;
         this.players.set(peerId, p);
       }
       this.onMessage?.(peerId, msg);
@@ -138,9 +146,14 @@ export class PeerSession {
     this.broadcast({ type: 'pos', x, z, ry, anim });
   }
 
-  sendHello({ name, color, outfitId, outfitColor, hatColor, characterId }) {
-    this.localHello = { type: 'hello', name, color, outfitId, outfitColor, hatColor, characterId };
+  sendHello({ name, color, outfitId, outfitColor, hatColor, characterId, auraColor }) {
+    this.localHello = { type: 'hello', name, color, outfitId, outfitColor, hatColor, characterId, auraColor };
     this.broadcast(this.localHello);
+  }
+
+  /** Interacciones de mundo: cofres, casas, portales, vehículos. */
+  sendAction(action, id = null) {
+    this.broadcast({ type: 'action', action, id });
   }
 
   sendCapture(catId) {

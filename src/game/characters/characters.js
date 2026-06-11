@@ -35,7 +35,8 @@ export const CHARACTERS = [
     dressColor: '#3b2f6a',
     hatColor: '#ff5f93',
     aura: '#8a7fd0',
-    unlock: 'levels:9'
+    unlock: 'levels:9',
+    price: 400
   },
   {
     id: 'runner-neon',
@@ -45,7 +46,8 @@ export const CHARACTERS = [
     dressColor: '#7c4dff',
     hatColor: '#00d4ff',
     aura: '#ff66cc',
-    unlock: 'levels:15'
+    unlock: 'levels:15',
+    price: 600
   },
   {
     id: 'princesa-estelar',
@@ -55,7 +57,8 @@ export const CHARACTERS = [
     dressColor: '#ffd6a5',
     hatColor: '#c89eff',
     aura: '#ffe9b5',
-    unlock: 'levels:21'
+    unlock: 'levels:21',
+    price: 800
   }
 ];
 
@@ -67,13 +70,13 @@ export function getCharacterUnlockLevel(character) {
   return 999;
 }
 
-export const isCharacterUnlocked = (character, completedLevels = 0) =>
-  getCharacterUnlockLevel(character) <= completedLevels;
+export const isCharacterUnlocked = (character, completedLevels = 0, purchasedCharacterIds = []) =>
+  purchasedCharacterIds.includes(character?.id) || getCharacterUnlockLevel(character) <= completedLevels;
 
-/** Personaje activo validado contra desbloqueo (fallback: Sarita). */
+/** Personaje activo validado contra desbloqueo/compra (fallback: Sarita). */
 export function resolveActiveCharacter(settings, completedLevels = 0) {
   const selected = getCharacterById(settings?.selectedCharacterId ?? 'sarita');
-  return isCharacterUnlocked(selected, completedLevels) ? selected : CHARACTERS[0];
+  return isCharacterUnlocked(selected, completedLevels, settings?.purchasedCharacterIds ?? []) ? selected : CHARACTERS[0];
 }
 
 /**

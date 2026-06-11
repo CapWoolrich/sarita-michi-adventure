@@ -34,7 +34,10 @@ const DEFAULTS = {
   claimedRewardKeys: [],
   highScores: {},
   selectedCharacterId: 'sarita',
-  purchasedOutfitIds: []
+  purchasedOutfitIds: [],
+  purchasedCharacterIds: [],
+  purchasedAccessoryIds: [],
+  equippedAccessoryId: null
 };
 
 export function loadSettings() {
@@ -51,7 +54,9 @@ export function loadSettings() {
       drawDistance: preset.drawDistance,
       ...parsed,
       claimedRewardKeys: Array.isArray(parsed.claimedRewardKeys) ? parsed.claimedRewardKeys : [],
-      purchasedOutfitIds: Array.isArray(parsed.purchasedOutfitIds) ? parsed.purchasedOutfitIds : []
+      purchasedOutfitIds: Array.isArray(parsed.purchasedOutfitIds) ? parsed.purchasedOutfitIds : [],
+      purchasedCharacterIds: Array.isArray(parsed.purchasedCharacterIds) ? parsed.purchasedCharacterIds : [],
+      purchasedAccessoryIds: Array.isArray(parsed.purchasedAccessoryIds) ? parsed.purchasedAccessoryIds : []
     };
   } catch { return { ...DEFAULTS }; }
 }

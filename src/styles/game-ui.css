@@ -2271,3 +2271,32 @@ body { overflow: hidden; }
   font-size: 12.5px;
   line-height: 1.4;
 }
+
+/* --- Tabs de la tienda --- */
+
+.kw-shop-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 22px 0;
+}
+
+.kw-shop-tab {
+  flex: 1;
+  padding: 9px 8px;
+  border: 1px solid rgba(192, 132, 252, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.65);
+  color: #6e3f9a;
+  font-weight: 800;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+.kw-shop-tab:active { transform: scale(0.96); }
+
+.kw-shop-tab-active {
+  background: linear-gradient(135deg, #c084fc, #ec4899);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(192, 132, 252, 0.35);
+}

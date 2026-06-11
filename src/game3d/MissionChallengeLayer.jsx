@@ -10,20 +10,29 @@ function stablePositions(key, count, radius = 48) {
   });
 }
 
-function SlowZoneRuntime({ active, zones, playerPositionRef, movementMultiplierRef }) {
+/**
+ * Único escritor de movementMultiplierRef: combina zonas lentas y modo
+ * vehículo (boost). También expira el vehículo y avisa una sola vez.
+ */
+function MovementRuntime({ slowActive, zones, playerPositionRef, movementMultiplierRef, vehicleStateRef, onVehicleEnd }) {
   useFrame(() => {
     if (!movementMultiplierRef) return;
-    if (!active) {
-      movementMultiplierRef.current = 1;
-      return;
-    }
+    let multiplier = 1;
     const player = playerPositionRef.current;
-    if (!player) {
-      movementMultiplierRef.current = 1;
-      return;
+    if (slowActive && player) {
+      const isInside = zones.some(([x, , z]) => Math.hypot(player.x - x, player.z - z) < 9);
+      if (isInside) multiplier *= 0.52;
     }
-    const isInside = zones.some(([x, , z]) => Math.hypot(player.x - x, player.z - z) < 9);
-    movementMultiplierRef.current = isInside ? 0.52 : 1;
+    const vehicle = vehicleStateRef?.current;
+    if (vehicle?.active) {
+      if (Date.now() > (vehicle.until ?? 0)) {
+        vehicle.active = false;
+        onVehicleEnd?.();
+      } else {
+        multiplier *= 1.6;
+      }
+    }
+    movementMultiplierRef.current = multiplier;
   });
   return null;
 }
@@ -113,6 +122,99 @@ function EscapePortal({ portal, playerPositionRef, onEscapeComplete }) {
   );
 }
 
+/** Anillos de la misión "vehicle_dash": cuentan solo con vehículo activo. */
+function DashCheckpoints({ checkpoints = [], hitIds = [], playerPositionRef, vehicleStateRef, onCheckpointHit, onNeedVehicle }) {
+  const firedRef = useRef(new Set());
+  const needMsgAtRef = useRef(0);
+  const groupRef = useRef();
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    if (groupRef.current) {
+      groupRef.current.children.forEach((g, i) => {
+        g.rotation.y = t * 0.6 + i * 2.1;
+        g.position.y = checkpoints[i]?.position?.[1] ?? 1.4;
+      });
+    }
+    // Resync tras restart: el runtime limpia hitIds, limpiamos el dedupe local
+    if (hitIds.length === 0 && firedRef.current.size > 0) firedRef.current.clear();
+    const player = playerPositionRef.current;
+    if (!player) return;
+    for (const cp of checkpoints) {
+      if (hitIds.includes(cp.id) || firedRef.current.has(cp.id)) continue;
+      const distance = Math.hypot(player.x - cp.position[0], player.z - cp.position[2]);
+      if (distance < 3.4) {
+        if (vehicleStateRef?.current?.active) {
+          firedRef.current.add(cp.id);
+          onCheckpointHit?.(cp.id);
+        } else if (Date.now() > needMsgAtRef.current) {
+          needMsgAtRef.current = Date.now() + 3500;
+          onNeedVehicle?.();
+        }
+      }
+    }
+  });
+
+  return (
+    <group ref={groupRef}>
+      {checkpoints.map((cp) => {
+        const hit = hitIds.includes(cp.id);
+        return (
+          <group key={cp.id} position={cp.position}>
+            <mesh>
+              <torusGeometry args={[2.6, 0.18, 10, 36]} />
+              <meshBasicMaterial color={hit ? '#7aff9e' : '#ffd066'} transparent opacity={hit ? 0.3 : 0.9} toneMapped={false} />
+            </mesh>
+            <mesh position={[0, -(cp.position[1] ?? 1.4) + 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[2.2, 2.7, 28]} />
+              <meshBasicMaterial color={hit ? '#7aff9e' : '#ffd066'} transparent opacity={0.3} toneMapped={false} />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+/** Zona de regreso de "city_quest": aparece en la plaza al juntar los tesoros. */
+function QuestReturnZone({ active, position = [0, 0, 16], playerPositionRef, onReached }) {
+  const doneRef = useRef(false);
+  const ringRef = useRef();
+  useFrame(({ clock }) => {
+    if (ringRef.current) {
+      ringRef.current.visible = !!active;
+      if (active) {
+        const s = 1 + Math.sin(clock.getElapsedTime() * 2.4) * 0.08;
+        ringRef.current.scale.set(s, 1, s);
+      }
+    }
+    if (!active) {
+      doneRef.current = false;
+      return;
+    }
+    const player = playerPositionRef.current;
+    if (!player || doneRef.current) return;
+    if (Math.hypot(player.x - position[0], player.z - position[2]) < 5.2) {
+      doneRef.current = true;
+      onReached?.();
+    }
+  });
+  return (
+    <group position={position}>
+      <group ref={ringRef} visible={false}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 0]}>
+          <ringGeometry args={[4.2, 5, 40]} />
+          <meshBasicMaterial color="#7aff9e" transparent opacity={0.55} toneMapped={false} />
+        </mesh>
+        <mesh position={[0, 2.8, 0]}>
+          <octahedronGeometry args={[0.4, 0]} />
+          <meshBasicMaterial color="#7aff9e" toneMapped={false} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
 function ChaseMichi({ index, playerPositionRef, onEnemyHit, invulnUntilRef }) {
   const ref = useRef();
   const lastHitRef = useRef(0);
@@ -154,20 +256,65 @@ function ChaseMichi({ index, playerPositionRef, onEnemyHit, invulnUntilRef }) {
   );
 }
 
-export default function MissionChallengeLayer({ missionType, modifiers = {}, worldTheme, playerPositionRef, movementMultiplierRef, exitPortal, onEscapeComplete, onEnemyHit, invulnUntilRef }) {
+export default function MissionChallengeLayer({
+  missionType,
+  modifiers = {},
+  worldTheme,
+  playerPositionRef,
+  movementMultiplierRef,
+  exitPortal,
+  onEscapeComplete,
+  onEnemyHit,
+  invulnUntilRef,
+  vehicleStateRef,
+  onVehicleEnd,
+  checkpoints = [],
+  checkpointsHit = [],
+  onCheckpointHit,
+  onNeedVehicle,
+  questPhase = 'collect',
+  onQuestZoneReached
+}) {
   const slowZones = useMemo(() => stablePositions(`${worldTheme}-slow-zones`, 4, 72), [worldTheme]);
   const showSlowZones = missionType === 'slow_zone' || modifiers.slowZones;
   const showCityProps = missionType === 'city_hide' || modifiers.cityProps;
   const showMountainPlatforms = missionType === 'mountain_jump' || modifiers.platforms;
   const isEscape = missionType === 'escape' || modifiers.escapeMode;
+  const isDash = missionType === 'vehicle_dash';
+  const isCityQuest = missionType === 'city_quest';
 
   return (
     <group>
-      <SlowZoneRuntime active={showSlowZones} zones={slowZones} playerPositionRef={playerPositionRef} movementMultiplierRef={movementMultiplierRef} />
+      <MovementRuntime
+        slowActive={showSlowZones}
+        zones={slowZones}
+        playerPositionRef={playerPositionRef}
+        movementMultiplierRef={movementMultiplierRef}
+        vehicleStateRef={vehicleStateRef}
+        onVehicleEnd={onVehicleEnd}
+      />
       {showSlowZones && <SlowZones zones={slowZones} />}
       {showCityProps && <CityProps />}
       {showMountainPlatforms && <MountainPlatforms />}
       {isEscape && exitPortal && <EscapePortal portal={exitPortal} playerPositionRef={playerPositionRef} onEscapeComplete={onEscapeComplete} />}
+      {isDash && checkpoints.length > 0 && (
+        <DashCheckpoints
+          checkpoints={checkpoints}
+          hitIds={checkpointsHit}
+          playerPositionRef={playerPositionRef}
+          vehicleStateRef={vehicleStateRef}
+          onCheckpointHit={onCheckpointHit}
+          onNeedVehicle={onNeedVehicle}
+        />
+      )}
+      {isCityQuest && (
+        <QuestReturnZone
+          active={questPhase === 'return'}
+          position={[0, 0, 16]}
+          playerPositionRef={playerPositionRef}
+          onReached={onQuestZoneReached}
+        />
+      )}
       {/* ChaseMichi REMOVIDO — los ZombieCats spawneados por generateLevelCats manejan esto */}
     </group>
   );

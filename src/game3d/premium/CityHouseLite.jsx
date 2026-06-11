@@ -54,7 +54,7 @@ export default function CityHouseLite({
         <InteractiveProp
           position={doorWorld}
           radius={2.2}
-          cooldownMs={9000}
+          cooldownMs={3000}
           hintColor="#ff9bc8"
           hintY={2.4}
           playerPositionRef={playerPositionRef}

@@ -1,5 +1,5 @@
 import { Canvas, useFrame } from '@react-three/fiber';
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import * as THREE from 'three';
 import WorldScene from './WorldScene';
 import CharacterSarita3D from './CharacterSarita3D';
@@ -15,6 +15,7 @@ import PowerUps from './PowerUps';
 import BellEntity3D from './BellEntity3D';
 import MissionChallengeLayer from './MissionChallengeLayer';
 import PremiumWorldProps from './premium/PremiumWorldProps';
+import MountedVehicle from './premium/MountedVehicle';
 import { getEnemyConfig } from './enemies/biomeEnemies';
 import { GRAPHICS_PRESETS } from '../game/graphicsSettings';
 
@@ -61,19 +62,38 @@ function SceneRuntime({
   outfitColor,
   hatColor,
   auraColor,
+  characterId,
   remotePlayers,
   onPowerUpCollect,
   onPropInteract,
   graphicsProfile,
   bells = [],
   activatedBellIds = [],
-  onBellActivate
+  onBellActivate,
+  runtimeKey,
+  teleportRef,
+  requestTeleport,
+  vehicleStateRef,
+  onVehicleEnd,
+  openedChestsRef,
+  checkpoints = [],
+  checkpointsHit = [],
+  onCheckpointHit,
+  onNeedVehicle,
+  questPhase = 'collect',
+  onQuestZoneReached
 }) {
   const characterRef = useRef();
   useRobloxLikeControls({ characterRef, touchState, isPaused, isLevelComplete, onDebugUpdate, speedMode, jumpRequestedRef, movementMultiplierRef });
 
   useFrame(() => {
     if (!characterRef.current) return;
+    // Teleports solicitados por puertas/portales (sin física, un solo frame)
+    if (teleportRef?.current) {
+      characterRef.current.position.x = teleportRef.current.x;
+      characterRef.current.position.z = teleportRef.current.z;
+      teleportRef.current = null;
+    }
     const p = characterRef.current.position;
     let nearestCat = null;
     let nearestDistance = Infinity;
@@ -102,8 +122,19 @@ function SceneRuntime({
   return (
     <>
       <WorldScene levelIndex={levelIndex} worldTheme={worldTheme} graphicsProfile={graphicsProfile} missionType={missionType} missionModifiers={missionModifiers} />
-      <PremiumWorldProps worldTheme={worldTheme} graphicsProfile={graphicsProfile} playerPositionRef={playerPositionRef} onPropInteract={onPropInteract} />
+      <PremiumWorldProps
+        key={`pwp-${runtimeKey}`}
+        worldTheme={worldTheme}
+        missionType={missionType}
+        graphicsProfile={graphicsProfile}
+        playerPositionRef={playerPositionRef}
+        onPropInteract={onPropInteract}
+        requestTeleport={requestTeleport}
+        vehicleStateRef={vehicleStateRef}
+        openedChestsRef={openedChestsRef}
+      />
       <MissionChallengeLayer
+        key={`mcl-${runtimeKey}`}
         missionType={missionType}
         modifiers={missionModifiers}
         worldTheme={worldTheme}
@@ -113,6 +144,14 @@ function SceneRuntime({
         onEscapeComplete={onEscapeComplete}
         onEnemyHit={onEnemyHit}
         invulnUntilRef={invulnUntilRef}
+        vehicleStateRef={vehicleStateRef}
+        onVehicleEnd={onVehicleEnd}
+        checkpoints={checkpoints}
+        checkpointsHit={checkpointsHit}
+        onCheckpointHit={onCheckpointHit}
+        onNeedVehicle={onNeedVehicle}
+        questPhase={questPhase}
+        onQuestZoneReached={onQuestZoneReached}
       />
       {bells.map((bell) => (
         <BellEntity3D
@@ -164,10 +203,11 @@ function SceneRuntime({
       {capturedFXList.map((fx) => (
         <CaptureFX key={fx.id} position={[fx.x, fx.y, fx.z]} color={fx.color} onComplete={() => removeFX(fx.id)} />
       ))}
-      <CharacterSarita3D characterRef={characterRef} animState="run" outfitColor={outfitColor} hatColor={hatColor} auraColor={auraColor} />
+      <CharacterSarita3D characterRef={characterRef} animState="run" outfitColor={outfitColor} hatColor={hatColor} auraColor={auraColor} characterId={characterId} />
+      <MountedVehicle characterRef={characterRef} vehicleStateRef={vehicleStateRef} />
       <PowerUps count={graphicsProfile?.powerUpCount ?? 4} worldKey={`${worldTheme}-${levelIndex}-${missionType}`} playerPositionRef={playerPositionRef} onCollect={onPowerUpCollect} />
       {remotePlayers.map((rp) => (
-        <RemotePlayer key={rp.id} peerId={rp.id} name={rp.name} color={rp.color} outfitColor={rp.outfitColor || rp.color} hatColor={rp.hatColor} anim={rp.anim ?? 'idle'} position={{ x: rp.x ?? 0, z: rp.z ?? 0 }} rotation={rp.ry ?? 0} />
+        <RemotePlayer key={rp.id} peerId={rp.id} name={rp.name} color={rp.color} outfitColor={rp.outfitColor || rp.color} hatColor={rp.hatColor} auraColor={rp.auraColor} characterId={rp.characterId} zone={rp.zone} vehicle={!!rp.vehicle} anim={rp.anim ?? 'idle'} position={{ x: rp.x ?? 0, z: rp.z ?? 0 }} rotation={rp.ry ?? 0} />
       ))}
       <SaritaTrail characterRef={characterRef} active={speedMode === 'fast'} />
       {enemyConfigs.map((cfg, i) => (
@@ -201,13 +241,22 @@ export default forwardRef(function Game3DCanvas(
     outfitColor,
     hatColor,
     auraColor = null,
+    characterId = 'sarita',
     remotePlayers = [],
     onPowerUpCollect,
     onPropInteract,
     bells = [],
     activatedBellIds = [],
     onBellActivate,
-    runtimeKey
+    runtimeKey,
+    openedChestsRef = null,
+    onVehicleEnd,
+    checkpoints = [],
+    checkpointsHit = [],
+    onCheckpointHit,
+    onNeedVehicle,
+    questPhase = 'collect',
+    onQuestZoneReached
   },
   ref
 ) {
@@ -219,6 +268,9 @@ export default forwardRef(function Game3DCanvas(
   const [debugState, setDebugState] = useState({});
   const playerPositionRef = useRef(null);
   const catLivePositionsRef = useRef({});
+  const teleportRef = useRef(null);
+  const vehicleStateRef = useRef({ active: false, until: 0, color: '#ff66cc' });
+  const requestTeleport = useCallback((x, z) => { teleportRef.current = { x, z }; }, []);
   const [capturedFXList, setCapturedFXList] = useState([]);
   const activeGraphics = graphicsProfile ?? (lowQuality ? GRAPHICS_PRESETS.low : GRAPHICS_PRESETS.high);
 
@@ -226,6 +278,8 @@ export default forwardRef(function Game3DCanvas(
     catLivePositionsRef.current = {};
     captureStateRef.current = {};
     movementMultiplierRef.current = 1;
+    teleportRef.current = null;
+    vehicleStateRef.current = { active: false, until: 0, color: '#ff66cc' };
     setCapturedFXList([]);
   }, [runtimeKey]);
 
@@ -291,6 +345,7 @@ export default forwardRef(function Game3DCanvas(
           outfitColor={outfitColor}
           hatColor={hatColor}
           auraColor={auraColor}
+          characterId={characterId}
           remotePlayers={remotePlayers}
           onPowerUpCollect={onPowerUpCollect}
           onPropInteract={onPropInteract}
@@ -298,6 +353,18 @@ export default forwardRef(function Game3DCanvas(
           bells={bells}
           activatedBellIds={activatedBellIds}
           onBellActivate={onBellActivate}
+          runtimeKey={runtimeKey}
+          teleportRef={teleportRef}
+          requestTeleport={requestTeleport}
+          vehicleStateRef={vehicleStateRef}
+          onVehicleEnd={onVehicleEnd}
+          openedChestsRef={openedChestsRef}
+          checkpoints={checkpoints}
+          checkpointsHit={checkpointsHit}
+          onCheckpointHit={onCheckpointHit}
+          onNeedVehicle={onNeedVehicle}
+          questPhase={questPhase}
+          onQuestZoneReached={onQuestZoneReached}
         />
         {!DISABLE_FX && activeGraphics.postfxEnabled && <PostFX />}
       </Canvas>

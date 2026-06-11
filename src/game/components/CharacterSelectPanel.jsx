@@ -3,9 +3,9 @@ import { CHARACTERS, getCharacterUnlockLevel, isCharacterUnlocked } from '../cha
 /**
  * Selector de personajes jugables (variaciones ligeras del mismo modelo).
  */
-export default function CharacterSelectPanel({ isOpen, currentCharacterId = 'sarita', completedLevels = 0, onSelect, onClose }) {
+export default function CharacterSelectPanel({ isOpen, currentCharacterId = 'sarita', completedLevels = 0, purchasedCharacterIds = [], onSelect, onClose }) {
   if (!isOpen) return null;
-  const unlockedCount = CHARACTERS.filter((c) => isCharacterUnlocked(c, completedLevels)).length;
+  const unlockedCount = CHARACTERS.filter((c) => isCharacterUnlocked(c, completedLevels, purchasedCharacterIds)).length;
 
   return (
     <div className="kw-collection-overlay" data-game-ui="true" onClick={onClose}>
@@ -22,7 +22,7 @@ export default function CharacterSelectPanel({ isOpen, currentCharacterId = 'sar
         <div className="kw-collection-body">
           <div className="kw-wardrobe-grid">
             {CHARACTERS.map((c) => {
-              const unlocked = isCharacterUnlocked(c, completedLevels);
+              const unlocked = isCharacterUnlocked(c, completedLevels, purchasedCharacterIds);
               const active = currentCharacterId === c.id;
               const needed = getCharacterUnlockLevel(c);
               const previewBg = c.dressColor
@@ -39,7 +39,7 @@ export default function CharacterSelectPanel({ isOpen, currentCharacterId = 'sar
                     {unlocked ? c.icon : '🔒'}
                   </div>
                   <strong>{c.name}</strong>
-                  <small>{unlocked ? c.description : `Completa ${needed} niveles`}</small>
+                  <small>{unlocked ? c.description : `Completa ${needed} niveles o cómpralo en la Tienda`}</small>
                   {active && unlocked && <span className="kw-wardrobe-badge">Activo</span>}
                 </button>
               );

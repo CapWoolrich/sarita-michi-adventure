@@ -8,6 +8,8 @@ export const MISSION_TYPES = {
   slow_zone: { title: 'Lago / Playa', description: 'Cruza zonas suaves que reducen tu velocidad.' },
   city_hide: { title: 'Ciudad', description: 'Busca michis entre callecitas y escondites.' },
   mountain_jump: { title: 'Montaña', description: 'Usa saltos y plataformas suaves para explorar.' },
+  city_quest: { title: 'Misión de ciudad', description: 'Entra a las casitas, encuentra los tesoros y vuelve a la plaza.' },
+  vehicle_dash: { title: 'Carrera kawaii', description: 'Súbete a un vehículo y cruza los anillos antes de que acabe el tiempo.' },
   escape: { title: 'Escape de michis', description: 'Llega al portal o sobrevive 45 segundos.' },
   finale: { title: 'Villa final', description: 'Rescate épico final con Michi Dorado y celebración.' }
 };
