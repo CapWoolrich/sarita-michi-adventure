@@ -2139,3 +2139,135 @@ body { overflow: hidden; }
 }
 .world-level-stars .on { color: #ffd066; text-shadow: 0 0 8px rgba(255, 208, 102, 0.7); }
 .world-level-stars .off { color: rgba(110, 63, 154, 0.18); }
+
+/* ============================================
+   VESTIDOR / TIENDA / PERSONAJES (cards compartidas)
+   ============================================ */
+
+.kw-wardrobe-auto { margin-bottom: 14px; }
+
+.kw-wardrobe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.kw-wardrobe-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 240, 250, 0.78));
+  box-shadow: 0 6px 16px rgba(35, 28, 78, 0.1);
+  cursor: pointer;
+  text-align: center;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.18s ease;
+}
+.kw-wardrobe-card:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: rgba(192, 132, 252, 0.5);
+  box-shadow: 0 10px 24px rgba(110, 63, 154, 0.18);
+}
+.kw-wardrobe-card:active:not(:disabled) { transform: scale(0.97); }
+.kw-wardrobe-card strong { font-size: 13.5px; color: #5a4880; line-height: 1.2; }
+.kw-wardrobe-card small { font-size: 11px; color: #8b5fb8; line-height: 1.25; }
+
+.kw-wardrobe-locked { opacity: 0.55; cursor: not-allowed; filter: grayscale(0.55); }
+
+.kw-wardrobe-current {
+  border-color: rgba(255, 208, 102, 0.85);
+  box-shadow: 0 8px 22px rgba(255, 208, 102, 0.3);
+}
+
+.kw-wardrobe-preview {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  font-size: 26px;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55), 0 4px 10px rgba(35, 28, 78, 0.16);
+}
+
+.kw-wardrobe-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffd066, #ffb45e);
+  color: #6a4a10;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+/* --- Tienda --- */
+
+.kw-shop-balance {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  margin-right: 12px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255, 224, 121, 0.9), rgba(255, 208, 102, 0.75));
+  color: #6a4a10;
+  font-weight: 900;
+  font-size: 15px;
+  box-shadow: 0 4px 10px rgba(255, 208, 102, 0.35);
+}
+
+.kw-shop-card { cursor: default; }
+
+.kw-shop-tag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(192, 132, 252, 0.2);
+  color: #6e3f9a;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.kw-shop-locked .kw-wardrobe-preview { filter: saturate(0.65); }
+
+.kw-shop-buy {
+  margin-top: 4px;
+  width: 100%;
+  padding: 8px 6px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #c084fc, #ec4899);
+  color: #fff;
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(192, 132, 252, 0.35);
+  transition: transform 0.12s ease, opacity 0.15s ease;
+}
+.kw-shop-buy:hover:not(:disabled) { transform: translateY(-1px); }
+.kw-shop-buy:active:not(:disabled) { transform: scale(0.96); }
+.kw-shop-buy:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.kw-shop-equipped {
+  background: linear-gradient(135deg, #ffd066, #ffb45e);
+  color: #6a4a10;
+}
+
+.kw-shop-hint {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(248, 240, 250, 0.7);
+  border: 1px dashed rgba(192, 132, 252, 0.35);
+  color: #6a5878;
+  font-size: 12.5px;
+  line-height: 1.4;
+}

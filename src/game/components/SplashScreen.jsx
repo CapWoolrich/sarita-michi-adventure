@@ -163,7 +163,7 @@ function SplashScene() {
 
 export default function SplashScreen({
   onStart, onContinue, onWorlds, onCollection, onHowToPlay, onCredits, onAchievements,
-  onShare, onDifficulty, onWardrobe, onMultiplayer,
+  onShare, onDifficulty, onWardrobe, onMultiplayer, onShop, onCharacters,
   currentDifficulty = 'medium', hasProgress = false,
   dailyStreak = 0, goldenCats = 0, highScores = {}, coins = 0, chests = 0
 }) {
@@ -213,6 +213,8 @@ export default function SplashScreen({
             <button type="button" className="kw-splash-v2-btn" onClick={() => onCollection?.()}><span aria-hidden>🧺</span><span>Colección</span></button>
             <button type="button" className="kw-splash-v2-btn" onClick={() => onAchievements?.()}><span aria-hidden>🏆</span><span>Logros</span></button>
             <button type="button" className="kw-splash-v2-btn" onClick={() => onWardrobe?.()}><span aria-hidden>👗</span><span>Vestidor</span></button>
+            <button type="button" className="kw-splash-v2-btn" onClick={() => onShop?.()}><span aria-hidden>🛍️</span><span>Tienda</span></button>
+            <button type="button" className="kw-splash-v2-btn" onClick={() => onCharacters?.()}><span aria-hidden>🦸</span><span>Personajes</span></button>
             <button type="button" className="kw-splash-v2-btn" onClick={() => onDifficulty?.()}><span aria-hidden>{diffIcon}</span><span>Dificultad</span></button>
             <button type="button" className="kw-splash-v2-btn" onClick={() => onShare?.()}><span aria-hidden>📤</span><span>Compartir</span></button>
             <button type="button" className="kw-splash-v2-btn" onClick={() => onHowToPlay?.()}><span aria-hidden>💡</span><span>Cómo jugar</span></button>

@@ -14,6 +14,7 @@ import RemotePlayer from './RemotePlayer';
 import PowerUps from './PowerUps';
 import BellEntity3D from './BellEntity3D';
 import MissionChallengeLayer from './MissionChallengeLayer';
+import PremiumWorldProps from './premium/PremiumWorldProps';
 import { getEnemyConfig } from './enemies/biomeEnemies';
 import { GRAPHICS_PRESETS } from '../game/graphicsSettings';
 
@@ -59,8 +60,10 @@ function SceneRuntime({
   invulnUntilRef,
   outfitColor,
   hatColor,
+  auraColor,
   remotePlayers,
   onPowerUpCollect,
+  onPropInteract,
   graphicsProfile,
   bells = [],
   activatedBellIds = [],
@@ -87,7 +90,7 @@ function SceneRuntime({
       }
     }
     captureStateRef.current = { player: { x: p.x, y: p.y, z: p.z }, nearestCat, nearestDistance };
-    playerPositionRef.current = { x: p.x, y: p.y, z: p.z };
+    playerPositionRef.current = { x: p.x, y: p.y, z: p.z, ry: characterRef.current.rotation.y };
     onDebugUpdate?.({ player: { x: p.x.toFixed(2), y: p.y.toFixed(2), z: p.z.toFixed(2) }, nearestCatId: nearestCat?.id ?? null, nearestDistance: Number.isFinite(nearestDistance) ? Number(nearestDistance.toFixed(2)) : null, missionType, renderedCatIds: cats.filter((c) => !capturedCatIds.includes(c.id)).map((c) => c.id) });
     onNearestCatChange?.(nearestCat?.id ?? null, nearestDistance, nearestDistance <= 2.6);
   });
@@ -99,6 +102,7 @@ function SceneRuntime({
   return (
     <>
       <WorldScene levelIndex={levelIndex} worldTheme={worldTheme} graphicsProfile={graphicsProfile} missionType={missionType} missionModifiers={missionModifiers} />
+      <PremiumWorldProps worldTheme={worldTheme} graphicsProfile={graphicsProfile} playerPositionRef={playerPositionRef} onPropInteract={onPropInteract} />
       <MissionChallengeLayer
         missionType={missionType}
         modifiers={missionModifiers}
@@ -160,10 +164,10 @@ function SceneRuntime({
       {capturedFXList.map((fx) => (
         <CaptureFX key={fx.id} position={[fx.x, fx.y, fx.z]} color={fx.color} onComplete={() => removeFX(fx.id)} />
       ))}
-      <CharacterSarita3D characterRef={characterRef} animState="run" outfitColor={outfitColor} hatColor={hatColor} />
+      <CharacterSarita3D characterRef={characterRef} animState="run" outfitColor={outfitColor} hatColor={hatColor} auraColor={auraColor} />
       <PowerUps count={graphicsProfile?.powerUpCount ?? 4} worldKey={`${worldTheme}-${levelIndex}-${missionType}`} playerPositionRef={playerPositionRef} onCollect={onPowerUpCollect} />
       {remotePlayers.map((rp) => (
-        <RemotePlayer key={rp.id} peerId={rp.id} name={rp.name} color={rp.color} outfitColor={rp.outfitColor || rp.color} position={{ x: rp.x ?? 0, z: rp.z ?? 0 }} rotation={rp.ry ?? 0} />
+        <RemotePlayer key={rp.id} peerId={rp.id} name={rp.name} color={rp.color} outfitColor={rp.outfitColor || rp.color} hatColor={rp.hatColor} anim={rp.anim ?? 'idle'} position={{ x: rp.x ?? 0, z: rp.z ?? 0 }} rotation={rp.ry ?? 0} />
       ))}
       <SaritaTrail characterRef={characterRef} active={speedMode === 'fast'} />
       {enemyConfigs.map((cfg, i) => (
@@ -196,8 +200,10 @@ export default forwardRef(function Game3DCanvas(
     invulnUntilRef,
     outfitColor,
     hatColor,
+    auraColor = null,
     remotePlayers = [],
     onPowerUpCollect,
+    onPropInteract,
     bells = [],
     activatedBellIds = [],
     onBellActivate,
@@ -284,8 +290,10 @@ export default forwardRef(function Game3DCanvas(
           invulnUntilRef={invulnUntilRef}
           outfitColor={outfitColor}
           hatColor={hatColor}
+          auraColor={auraColor}
           remotePlayers={remotePlayers}
           onPowerUpCollect={onPowerUpCollect}
+          onPropInteract={onPropInteract}
           graphicsProfile={activeGraphics}
           bells={bells}
           activatedBellIds={activatedBellIds}

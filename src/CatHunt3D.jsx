@@ -27,6 +27,10 @@ import MultiplayerLobby from './game/components/MultiplayerLobby';
 import GameOverPanel from './game/components/GameOverPanel';
 import RewardToast from './game/components/RewardToast';
 import { OUTFITS, getCompletedLevelCount, getUnlockLevel, resolveActiveOutfit } from './game/outfits/outfits';
+import { resolveActiveCharacter, resolvePlayerLook } from './game/characters/characters';
+import { purchaseOutfit } from './game/shop/shopCatalog';
+import ShopPanel from './game/components/ShopPanel';
+import CharacterSelectPanel from './game/components/CharacterSelectPanel';
 import { PeerSession } from './game/multiplayer/peerSession';
 import { loadEndlessState, saveEndlessState, getEndlessLevel } from './game/endlessMode';
 import { DIFFICULTY_ENEMY_COUNT } from './game/health/healthSystem';
@@ -58,6 +62,8 @@ export default function CatHunt3D() {
   const [isVictoryOpen, setIsVictoryOpen] = useState(false);
   const [endlessState, setEndlessState] = useState(() => loadEndlessState());
   const [isWardrobeOpen, setIsWardrobeOpen] = useState(false);
+  const [isShopOpen, setIsShopOpen] = useState(false);
+  const [isCharactersOpen, setIsCharactersOpen] = useState(false);
   const [isMultiplayerOpen, setIsMultiplayerOpen] = useState(false);
   const [mpSession, setMpSession] = useState(null);
   const [mpStatus, setMpStatus] = useState('idle');
@@ -69,6 +75,8 @@ export default function CatHunt3D() {
 
   const completedLevels = useMemo(() => getCompletedLevelCount(runtime.progress), [runtime.progress]);
   const activeOutfit = useMemo(() => resolveActiveOutfit(settings, runtime.worldConfig.theme, achievementsState, completedLevels), [settings, runtime.worldConfig.theme, achievementsState, completedLevels]);
+  const activeCharacter = useMemo(() => resolveActiveCharacter(settings, completedLevels), [settings, completedLevels]);
+  const playerLook = useMemo(() => resolvePlayerLook(settings, activeCharacter, activeOutfit), [settings, activeCharacter, activeOutfit]);
   const graphicsProfile = useMemo(() => getGraphicsProfile(settings), [settings]);
   const visibleCats = useMemo(() => runtime.cats.filter((c) => !runtime.capturedCatIds.includes(c.id)).length, [runtime.cats, runtime.capturedCatIds]);
   const missionEnemyBonus = runtime.levelConfig?.modifiers?.enemyBonus ?? 0;
@@ -106,12 +114,29 @@ export default function CatHunt3D() {
 
   useEffect(() => {
     if (!mpSession || screen !== 'game') return;
+    let last = null;
     const id = setInterval(() => {
       const pos = game3dRef.current?.getPlayerPosition?.();
-      if (pos) mpSession.sendPosition(pos.x, pos.z, 0, runtime.speedMode === 'fast' ? 'run' : 'idle');
+      if (!pos) return;
+      const moved = last ? Math.hypot(pos.x - last.x, pos.z - last.z) > 0.04 : false;
+      mpSession.sendPosition(pos.x, pos.z, pos.ry ?? 0, moved ? 'run' : 'idle');
+      last = { x: pos.x, z: pos.z };
     }, 100);
     return () => clearInterval(id);
-  }, [mpSession, screen, runtime.speedMode]);
+  }, [mpSession, screen]);
+
+  // Presencia social: si cambia outfit/personaje, el otro jugador lo ve
+  useEffect(() => {
+    if (!mpSession) return;
+    mpSession.sendHello({
+      name: activeCharacter.name,
+      color: playerLook.hatColor,
+      outfitId: settings.outfitOverride ?? 'auto',
+      outfitColor: playerLook.dressColor,
+      hatColor: playerLook.hatColor,
+      characterId: activeCharacter.id
+    });
+  }, [mpSession, activeCharacter, playerLook, settings.outfitOverride]);
 
   useEffect(() => {
     if (!mpSession) { setRemotePlayers([]); return; }
@@ -193,6 +218,21 @@ export default function CatHunt3D() {
       showFeedback('🧲 Imán activado');
     }
   }, [runtime, showFeedback]);
+
+  const onPropInteract = useCallback((payload) => {
+    if (!payload) return;
+    haptic.success();
+    if (payload.coins) setSettings((s) => ({ ...s, coins: (s.coins ?? 0) + payload.coins }));
+    if (payload.message) showFeedback(payload.message);
+  }, [showFeedback]);
+
+  const onShopBuy = useCallback((item) => {
+    const next = purchaseOutfit(settings, item);
+    if (!next) { showFeedback('Te faltan monedas 🪙'); return; }
+    setSettings(next);
+    haptic.success();
+    showFeedback(`✨ ¡${item.outfit.name} comprado!`);
+  }, [settings, showFeedback]);
 
   const onLoadingComplete = useCallback(() => { setIsLoadingScreen(false); runtime.setIsPaused?.(false); }, []);
   useEffect(() => { invulnUntilRef.current = runtime.health?.invulnUntil ?? 0; }, [runtime.health?.invulnUntil]);
@@ -317,6 +357,8 @@ export default function CatHunt3D() {
           onShare={() => setIsShareOpen(true)}
           onDifficulty={() => setIsDifficultyOpen(true)}
           onWardrobe={() => setIsWardrobeOpen(true)}
+          onShop={() => setIsShopOpen(true)}
+          onCharacters={() => setIsCharactersOpen(true)}
           onMultiplayer={() => setIsMultiplayerOpen(true)}
           currentDifficulty={runtime.difficulty}
           dailyStreak={settings.dailyStreak?.count ?? 0}
@@ -329,14 +371,16 @@ export default function CatHunt3D() {
         <WorldMapPanel isOpen={isWorldPanelOpen} worlds={runtime.worlds} currentWorldId={runtime.worldId} unlockedWorldIds={runtime.progress.unlockedWorldIds} progress={runtime.progress} onSelectWorld={(wid) => { runtime.goToWorld(wid); setIsWorldPanelOpen(false); setScreen('game'); }} onSelectLevel={(wid, lid) => { runtime.startLevel(wid, lid); setIsWorldPanelOpen(false); setScreen('game'); }} onClose={() => setIsWorldPanelOpen(false)} onLockedWorld={() => showFeedback('Completa el nivel anterior para desbloquearlo')} />
         <CatCollection isOpen={isCollectionOpen} worlds={runtime.worlds} progress={runtime.progress} onClose={() => setIsCollectionOpen(false)} />
         <AchievementsPanel isOpen={isAchievementsOpen} achievements={achievementsState} onClose={() => setIsAchievementsOpen(false)} />
-        <Wardrobe isOpen={isWardrobeOpen} currentOutfitId={settings.outfitOverride ?? 'auto'} achievements={achievementsState} totalCats={achievementsState?.totalCaught ?? 0} completedLevels={completedLevels} onSelect={(id) => { setSettings((s) => ({ ...s, outfitOverride: id })); setIsWardrobeOpen(false); }} onClose={() => setIsWardrobeOpen(false)} />
+        <Wardrobe isOpen={isWardrobeOpen} currentOutfitId={settings.outfitOverride ?? 'auto'} achievements={achievementsState} totalCats={achievementsState?.totalCaught ?? 0} completedLevels={completedLevels} purchasedOutfitIds={settings.purchasedOutfitIds ?? []} onSelect={(id) => { setSettings((s) => ({ ...s, outfitOverride: id })); setIsWardrobeOpen(false); }} onClose={() => setIsWardrobeOpen(false)} />
+        <ShopPanel isOpen={isShopOpen} settings={settings} completedLevels={completedLevels} currentOutfitId={settings.outfitOverride ?? 'auto'} onBuy={onShopBuy} onEquip={(id) => { setSettings((s) => ({ ...s, outfitOverride: id })); showFeedback('👗 Outfit equipado'); }} onClose={() => setIsShopOpen(false)} />
+        <CharacterSelectPanel isOpen={isCharactersOpen} currentCharacterId={activeCharacter.id} completedLevels={completedLevels} onSelect={(id) => { setSettings((s) => ({ ...s, selectedCharacterId: id })); setIsCharactersOpen(false); showFeedback('✨ Personaje seleccionado'); }} onClose={() => setIsCharactersOpen(false)} />
         <MultiplayerLobby
           isOpen={isMultiplayerOpen}
           status={mpStatus}
           roomCode={mpRoomCode}
           playersCount={remotePlayers.length}
-          onCreateRoom={async () => { const sess = new PeerSession({ onPlayerJoin: () => showFeedback('👋 Jugador conectado'), onPlayerLeave: () => showFeedback('👋 Jugador desconectado'), onMessage: () => {}, onStatus: setMpStatus }); const { roomCode } = await sess.createRoom(); setMpSession(sess); setMpRoomCode(roomCode); sess.sendHello({ name: 'Sarita', color: activeOutfit?.hatColor, outfitId: settings.outfitOverride ?? 'auto' }); }}
-          onJoinRoom={async (code) => { const sess = new PeerSession({ onPlayerJoin: () => showFeedback('✨ Conectado al host'), onPlayerLeave: () => showFeedback('Host desconectado'), onMessage: () => {}, onStatus: setMpStatus }); await sess.joinRoom(code); setMpSession(sess); setMpRoomCode(code); sess.sendHello({ name: 'Sarita', color: activeOutfit?.hatColor, outfitId: settings.outfitOverride ?? 'auto' }); }}
+          onCreateRoom={async () => { const sess = new PeerSession({ onPlayerJoin: () => showFeedback('👋 Jugador conectado'), onPlayerLeave: () => showFeedback('👋 Jugador desconectado'), onMessage: () => {}, onStatus: setMpStatus }); const { roomCode } = await sess.createRoom(); setMpSession(sess); setMpRoomCode(roomCode); sess.sendHello({ name: activeCharacter.name, color: playerLook.hatColor, outfitId: settings.outfitOverride ?? 'auto', outfitColor: playerLook.dressColor, hatColor: playerLook.hatColor, characterId: activeCharacter.id }); }}
+          onJoinRoom={async (code) => { const sess = new PeerSession({ onPlayerJoin: () => showFeedback('✨ Conectado al host'), onPlayerLeave: () => showFeedback('Host desconectado'), onMessage: () => {}, onStatus: setMpStatus }); await sess.joinRoom(code); setMpSession(sess); setMpRoomCode(code); sess.sendHello({ name: activeCharacter.name, color: playerLook.hatColor, outfitId: settings.outfitOverride ?? 'auto', outfitColor: playerLook.dressColor, hatColor: playerLook.hatColor, characterId: activeCharacter.id }); }}
           onClose={() => setIsMultiplayerOpen(false)}
         />
         <DifficultySelector isOpen={isDifficultyOpen} current={runtime.difficulty} allCompleted={false} onSelect={(diff) => { runtime.setDifficulty(diff); setSettings((s) => ({ ...s, difficulty: diff })); setIsDifficultyOpen(false); }} onClose={() => setIsDifficultyOpen(false)} />
@@ -378,9 +422,11 @@ export default function CatHunt3D() {
         mapRadius={110}
         lowQuality={settings.graphicsQuality === 'low'}
         graphicsProfile={graphicsProfile}
-        outfitColor={activeOutfit?.dressColor}
-        hatColor={activeOutfit?.hatColor}
+        outfitColor={playerLook.dressColor}
+        hatColor={playerLook.hatColor}
+        auraColor={playerLook.auraColor}
         remotePlayers={remotePlayers}
+        onPropInteract={onPropInteract}
         enemyCount={(DIFFICULTY_ENEMY_COUNT[runtime.difficulty] ?? 1) + missionEnemyBonus}
         onEnemyHit={() => { runtime.takeDamage?.(); haptic.fail(); }}
         onPowerUpCollect={onPowerUpCollect}

@@ -10,7 +10,7 @@
  * Mensaje protocol:
  *  { type: 'pos', x, z, ry, anim }
  *  { type: 'capture', catId, by }
- *  { type: 'hello', name, outfitId, color }
+ *  { type: 'hello', name, outfitId, color, outfitColor, hatColor, characterId }
  *  { type: 'world', worldId, levelId }   // host comparte nivel actual
  */
 // PeerJS se carga dinámicamente para no bloquear la app si falla el CDN
@@ -39,6 +39,7 @@ export class PeerSession {
     this.localPeerId = null;
     this.roomCode = null;
     this.isHost = false;
+    this.localHello = null;   // último hello local, para presentarse ante nuevos peers
     this.onPlayerJoin = onPlayerJoin;
     this.onPlayerLeave = onPlayerLeave;
     this.onMessage = onMessage;
@@ -95,6 +96,11 @@ export class PeerSession {
     if (!this.players.has(peerId)) this.players.set(peerId, {});
 
     conn.on('open', () => {
+      // Presentarse ante el peer nuevo (el host puede haber enviado su hello
+      // antes de que existiera esta conexión)
+      if (this.localHello) {
+        try { conn.send(this.localHello); } catch {}
+      }
       this.onPlayerJoin?.(peerId);
     });
     conn.on('data', (msg) => {
@@ -105,6 +111,7 @@ export class PeerSession {
         this.players.set(peerId, p);
       } else if (msg.type === 'hello') {
         p.name = msg.name; p.color = msg.color; p.outfitId = msg.outfitId;
+        p.outfitColor = msg.outfitColor; p.hatColor = msg.hatColor; p.characterId = msg.characterId;
         this.players.set(peerId, p);
       }
       this.onMessage?.(peerId, msg);
@@ -131,8 +138,9 @@ export class PeerSession {
     this.broadcast({ type: 'pos', x, z, ry, anim });
   }
 
-  sendHello({ name, color, outfitId }) {
-    this.broadcast({ type: 'hello', name, color, outfitId });
+  sendHello({ name, color, outfitId, outfitColor, hatColor, characterId }) {
+    this.localHello = { type: 'hello', name, color, outfitId, outfitColor, hatColor, characterId };
+    this.broadcast(this.localHello);
   }
 
   sendCapture(catId) {

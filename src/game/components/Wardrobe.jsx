@@ -1,8 +1,8 @@
 import { OUTFITS, getUnlockLevel, isOutfitUnlocked } from '../outfits/outfits';
 
-export default function Wardrobe({ isOpen, currentOutfitId, achievements, totalCats = 0, completedLevels = 0, onSelect, onClose }) {
+export default function Wardrobe({ isOpen, currentOutfitId, achievements, totalCats = 0, completedLevels = 0, purchasedOutfitIds = [], onSelect, onClose }) {
   if (!isOpen) return null;
-  const unlockedCount = OUTFITS.filter((o) => isOutfitUnlocked(o, achievements, totalCats, completedLevels)).length;
+  const unlockedCount = OUTFITS.filter((o) => isOutfitUnlocked(o, achievements, totalCats, completedLevels, purchasedOutfitIds)).length;
 
   return (
     <div className="kw-collection-overlay" data-game-ui="true" onClick={onClose}>
@@ -32,7 +32,8 @@ export default function Wardrobe({ isOpen, currentOutfitId, achievements, totalC
           </div>
           <div className="kw-wardrobe-grid">
             {OUTFITS.map((o) => {
-              const unlocked = isOutfitUnlocked(o, achievements, totalCats, completedLevels);
+              const unlocked = isOutfitUnlocked(o, achievements, totalCats, completedLevels, purchasedOutfitIds);
+              const purchased = purchasedOutfitIds.includes(o.id);
               const active = currentOutfitId === o.id;
               const needed = getUnlockLevel(o);
               return (
@@ -49,8 +50,9 @@ export default function Wardrobe({ isOpen, currentOutfitId, achievements, totalC
                     {unlocked ? o.icon : '🔒'}
                   </div>
                   <strong>{o.name}</strong>
-                  {!unlocked && <small>Completa {needed} niveles</small>}
-                  {unlocked && needed > 0 && <small>Ganado en nivel {needed}</small>}
+                  {!unlocked && <small>Completa {needed} niveles o cómpralo en la Tienda</small>}
+                  {unlocked && purchased && <small>Comprado en la Tienda</small>}
+                  {unlocked && !purchased && needed > 0 && <small>Ganado en nivel {needed}</small>}
                   {active && unlocked && <span className="kw-wardrobe-badge">Actual</span>}
                 </button>
               );
