@@ -5,8 +5,21 @@
 > (mundos vivos, personajes, tienda, multiplayer presencial) con identidad kawaii propia,
 > sin copiar assets/UI/estética de otros juegos y sin sacrificar rendimiento móvil.
 >
-> Estado: **v2 — segunda pasada (gameplay real)**. La v1 fue base visual; la v2
-> convierte los placeholders en sistemas jugables.
+> Estado: **v3 — todo el juego, no solo 2 mundos**. La v1 fue base visual, la v2
+> convirtió placeholders en sistemas jugables, la v3 reparte esos sistemas por
+> los 11 mundos y suma mecánicas de "feel battle-royale" (sin copiar IP):
+>
+> - **Loop de loot en todos los mundos**: cofre con tapa + **entrega aérea**
+>   (cofre con globo que cae del cielo a los ~18 s, con haz de luz, loot raro
+>   de 25 monedas) en los 11 mundos.
+> - **Vehículo montable en TODOS los mundos** (1–3 por mundo según tema).
+> - **Par de portales conectados en TODOS los mundos** (traversal/atajos).
+> - **Zonas con nombre** (named locations): letreros flotantes "Plaza Sakura",
+>   "Muelle Cristal", "Portal Neón", etc.
+> - **Casas con interior funcional en 4 mundos** (Sakura, Puerto Pastel,
+>   Villa Estelar, Ciudad Neón) + plaza de encuentro en cada uno.
+> - **Misiones repartidas**: `city_quest` en M2N1, M5N1 y M11N1;
+>   `vehicle_dash` en M3N3, M9N3 y M10N1.
 
 ---
 
