@@ -32,7 +32,12 @@ const DEFAULTS = {
   coins: 0,
   chests: 0,
   claimedRewardKeys: [],
-  highScores: {}
+  highScores: {},
+  selectedCharacterId: 'sarita',
+  purchasedOutfitIds: [],
+  purchasedCharacterIds: [],
+  purchasedAccessoryIds: [],
+  equippedAccessoryId: null
 };
 
 export function loadSettings() {
@@ -48,7 +53,10 @@ export function loadSettings() {
       vegetationDensity: preset.vegetationDensity,
       drawDistance: preset.drawDistance,
       ...parsed,
-      claimedRewardKeys: Array.isArray(parsed.claimedRewardKeys) ? parsed.claimedRewardKeys : []
+      claimedRewardKeys: Array.isArray(parsed.claimedRewardKeys) ? parsed.claimedRewardKeys : [],
+      purchasedOutfitIds: Array.isArray(parsed.purchasedOutfitIds) ? parsed.purchasedOutfitIds : [],
+      purchasedCharacterIds: Array.isArray(parsed.purchasedCharacterIds) ? parsed.purchasedCharacterIds : [],
+      purchasedAccessoryIds: Array.isArray(parsed.purchasedAccessoryIds) ? parsed.purchasedAccessoryIds : []
     };
   } catch { return { ...DEFAULTS }; }
 }

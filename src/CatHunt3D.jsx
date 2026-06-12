@@ -27,6 +27,10 @@ import MultiplayerLobby from './game/components/MultiplayerLobby';
 import GameOverPanel from './game/components/GameOverPanel';
 import RewardToast from './game/components/RewardToast';
 import { OUTFITS, getCompletedLevelCount, getUnlockLevel, resolveActiveOutfit } from './game/outfits/outfits';
+import { resolveActiveCharacter, resolvePlayerLook } from './game/characters/characters';
+import { purchaseOutfit, purchaseCharacter, purchaseAccessory, getAccessoryById } from './game/shop/shopCatalog';
+import ShopPanel from './game/components/ShopPanel';
+import CharacterSelectPanel from './game/components/CharacterSelectPanel';
 import { PeerSession } from './game/multiplayer/peerSession';
 import { loadEndlessState, saveEndlessState, getEndlessLevel } from './game/endlessMode';
 import { DIFFICULTY_ENEMY_COUNT } from './game/health/healthSystem';
@@ -55,9 +59,12 @@ export default function CatHunt3D() {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [allWorldsCompleted, setAllWorldsCompleted] = useState(false);
   const invulnUntilRef = useRef(0);
+  const openedChestsRef = useRef(new Set());
   const [isVictoryOpen, setIsVictoryOpen] = useState(false);
   const [endlessState, setEndlessState] = useState(() => loadEndlessState());
   const [isWardrobeOpen, setIsWardrobeOpen] = useState(false);
+  const [isShopOpen, setIsShopOpen] = useState(false);
+  const [isCharactersOpen, setIsCharactersOpen] = useState(false);
   const [isMultiplayerOpen, setIsMultiplayerOpen] = useState(false);
   const [mpSession, setMpSession] = useState(null);
   const [mpStatus, setMpStatus] = useState('idle');
@@ -69,6 +76,15 @@ export default function CatHunt3D() {
 
   const completedLevels = useMemo(() => getCompletedLevelCount(runtime.progress), [runtime.progress]);
   const activeOutfit = useMemo(() => resolveActiveOutfit(settings, runtime.worldConfig.theme, achievementsState, completedLevels), [settings, runtime.worldConfig.theme, achievementsState, completedLevels]);
+  const activeCharacter = useMemo(() => resolveActiveCharacter(settings, completedLevels), [settings, completedLevels]);
+  const playerLook = useMemo(() => {
+    const look = resolvePlayerLook(settings, activeCharacter, activeOutfit);
+    const accessory = settings.equippedAccessoryId ? getAccessoryById(settings.equippedAccessoryId) : null;
+    if (accessory && (settings.purchasedAccessoryIds ?? []).includes(accessory.id)) {
+      return { ...look, auraColor: accessory.color };
+    }
+    return look;
+  }, [settings, activeCharacter, activeOutfit]);
   const graphicsProfile = useMemo(() => getGraphicsProfile(settings), [settings]);
   const visibleCats = useMemo(() => runtime.cats.filter((c) => !runtime.capturedCatIds.includes(c.id)).length, [runtime.cats, runtime.capturedCatIds]);
   const missionEnemyBonus = runtime.levelConfig?.modifiers?.enemyBonus ?? 0;
@@ -87,6 +103,8 @@ export default function CatHunt3D() {
     if (type === 'slow_zone') return `Cruza zonas lentas y rescata ${requiredCats} michis`;
     if (type === 'city_hide') return `Busca escondites y rescata ${requiredCats} michis`;
     if (type === 'mountain_jump') return `Usa saltos suaves y rescata ${requiredCats} michis`;
+    if (type === 'city_quest') return 'Entra a 2 casitas, encuentra 2 tesoros y vuelve a la plaza';
+    if (type === 'vehicle_dash') return 'Súbete a un vehículo y cruza los 3 anillos a tiempo';
     if (type === 'escape') return 'Llega al portal o sobrevive 45 segundos';
     if (type === 'finale') return `Rescate final: ${requiredCats} michis y Michi Dorado`;
     return `Atrapa ${requiredCats} michis`;
@@ -106,12 +124,44 @@ export default function CatHunt3D() {
 
   useEffect(() => {
     if (!mpSession || screen !== 'game') return;
+    let last = null;
     const id = setInterval(() => {
       const pos = game3dRef.current?.getPlayerPosition?.();
-      if (pos) mpSession.sendPosition(pos.x, pos.z, 0, runtime.speedMode === 'fast' ? 'run' : 'idle');
+      if (!pos) return;
+      const moved = last ? Math.hypot(pos.x - last.x, pos.z - last.z) > 0.04 : false;
+      mpSession.sendPosition(pos.x, pos.z, pos.ry ?? 0, moved ? 'run' : 'idle');
+      last = { x: pos.x, z: pos.z };
     }, 100);
     return () => clearInterval(id);
-  }, [mpSession, screen, runtime.speedMode]);
+  }, [mpSession, screen]);
+
+  // Presencia social: si cambia outfit/personaje/aura, el otro jugador lo ve
+  useEffect(() => {
+    if (!mpSession) return;
+    mpSession.sendHello({
+      name: activeCharacter.name,
+      color: playerLook.hatColor,
+      outfitId: settings.outfitOverride ?? 'auto',
+      outfitColor: playerLook.dressColor,
+      hatColor: playerLook.hatColor,
+      characterId: activeCharacter.id,
+      auraColor: playerLook.auraColor
+    });
+  }, [mpSession, activeCharacter, playerLook, settings.outfitOverride]);
+
+  // Interacciones remotas: feedback + estado compartido (cofres abiertos)
+  const onMpMessage = useCallback((peerId, msg) => {
+    if (msg?.type !== 'action') return;
+    if (msg.action === 'chest_open' && msg.id) openedChestsRef.current.add(msg.id);
+    const texts = {
+      chest_open: '🎁 Tu amigo abrió un cofre',
+      house_enter: '🏠 Tu amigo entró a una casita',
+      house_exit: '🚪 Tu amigo salió de la casita',
+      portal_use: '🌀 Tu amigo usó un portal',
+      vehicle_on: '🚗 ¡Tu amigo va en vehículo!'
+    };
+    if (texts[msg.action]) showFeedback(texts[msg.action]);
+  }, [showFeedback]);
 
   useEffect(() => {
     if (!mpSession) { setRemotePlayers([]); return; }
@@ -193,6 +243,79 @@ export default function CatHunt3D() {
       showFeedback('🧲 Imán activado');
     }
   }, [runtime, showFeedback]);
+
+  const onPropInteract = useCallback((payload) => {
+    if (!payload) return;
+    haptic.success();
+    let message = payload.message;
+    if (payload.coins) setSettings((s) => ({ ...s, coins: (s.coins ?? 0) + payload.coins }));
+    if (payload.type === 'chest' && payload.id) {
+      openedChestsRef.current.add(payload.id);
+      mpSession?.sendAction?.('chest_open', payload.id);
+      if (payload.quest) {
+        const res = runtime.recordQuestEvent?.('item', payload.id);
+        if (res) message = res.phase === 'return' ? '🎁 ¡Tesoros listos! Vuelve a la plaza ✨' : `🎁 Tesoro ${Math.min(res.items, res.needItems)}/${res.needItems} (+${payload.coins} monedas)`;
+      }
+    } else if (payload.type === 'house_enter') {
+      mpSession?.sendAction?.('house_enter', payload.id);
+      const res = runtime.recordQuestEvent?.('house', payload.id);
+      if (res && !res.duplicate) message = res.phase === 'return' ? '🏠 ¡Listo! Vuelve a la plaza ✨' : `🏠 Casita ${Math.min(res.houses, res.needHouses)}/${res.needHouses} · busca el tesoro`;
+    } else if (payload.type === 'house_exit') {
+      mpSession?.sendAction?.('house_exit', payload.id);
+    } else if (payload.type === 'portal') {
+      mpSession?.sendAction?.('portal_use', payload.id);
+    } else if (payload.type === 'vehicle') {
+      mpSession?.sendAction?.(payload.active ? 'vehicle_on' : 'vehicle_off');
+    }
+    if (message) showFeedback(message);
+  }, [mpSession, runtime, showFeedback]);
+
+  const onVehicleEnd = useCallback(() => {
+    showFeedback('🚗 El vehículo se detuvo');
+    mpSession?.sendAction?.('vehicle_off');
+  }, [mpSession, showFeedback]);
+
+  const onCheckpointHit = useCallback((cpId) => {
+    const res = runtime.hitCheckpoint?.(cpId);
+    if (res) {
+      haptic.success();
+      showFeedback(res.count >= res.total ? '🏁 ¡Carrera completada!' : `🏁 Anillo ${res.count}/${res.total}`);
+    }
+  }, [runtime, showFeedback]);
+
+  const onNeedVehicle = useCallback(() => showFeedback('Necesitas un vehículo 🚗 ¡Busca uno y súbete!'), [showFeedback]);
+
+  const onQuestZoneReached = useCallback(() => {
+    haptic.success();
+    runtime.completeQuest?.('plaza');
+  }, [runtime]);
+
+  // Cofres por nivel: se limpian cuando el runtime arranca un nivel (incluye restart)
+  useEffect(() => { openedChestsRef.current = new Set(); }, [runtime.levelNonce]);
+
+  const onShopBuy = useCallback((item) => {
+    const next = purchaseOutfit(settings, item);
+    if (!next) { showFeedback('Te faltan monedas 🪙'); return; }
+    setSettings(next);
+    haptic.success();
+    showFeedback(`✨ ¡${item.outfit.name} comprado!`);
+  }, [settings, showFeedback]);
+
+  const onShopBuyCharacter = useCallback((character) => {
+    const next = purchaseCharacter(settings, character);
+    if (!next) { showFeedback('Te faltan monedas 🪙'); return; }
+    setSettings({ ...next, selectedCharacterId: character.id });
+    haptic.success();
+    showFeedback(`🦸 ¡${character.name} se unió al equipo!`);
+  }, [settings, showFeedback]);
+
+  const onShopBuyAccessory = useCallback((accessory) => {
+    const next = purchaseAccessory(settings, accessory);
+    if (!next) { showFeedback('Te faltan monedas 🪙'); return; }
+    setSettings({ ...next, equippedAccessoryId: accessory.id });
+    haptic.success();
+    showFeedback(`✨ ¡${accessory.name} equipada!`);
+  }, [settings, showFeedback]);
 
   const onLoadingComplete = useCallback(() => { setIsLoadingScreen(false); runtime.setIsPaused?.(false); }, []);
   useEffect(() => { invulnUntilRef.current = runtime.health?.invulnUntil ?? 0; }, [runtime.health?.invulnUntil]);
@@ -317,6 +440,8 @@ export default function CatHunt3D() {
           onShare={() => setIsShareOpen(true)}
           onDifficulty={() => setIsDifficultyOpen(true)}
           onWardrobe={() => setIsWardrobeOpen(true)}
+          onShop={() => setIsShopOpen(true)}
+          onCharacters={() => setIsCharactersOpen(true)}
           onMultiplayer={() => setIsMultiplayerOpen(true)}
           currentDifficulty={runtime.difficulty}
           dailyStreak={settings.dailyStreak?.count ?? 0}
@@ -329,14 +454,16 @@ export default function CatHunt3D() {
         <WorldMapPanel isOpen={isWorldPanelOpen} worlds={runtime.worlds} currentWorldId={runtime.worldId} unlockedWorldIds={runtime.progress.unlockedWorldIds} progress={runtime.progress} onSelectWorld={(wid) => { runtime.goToWorld(wid); setIsWorldPanelOpen(false); setScreen('game'); }} onSelectLevel={(wid, lid) => { runtime.startLevel(wid, lid); setIsWorldPanelOpen(false); setScreen('game'); }} onClose={() => setIsWorldPanelOpen(false)} onLockedWorld={() => showFeedback('Completa el nivel anterior para desbloquearlo')} />
         <CatCollection isOpen={isCollectionOpen} worlds={runtime.worlds} progress={runtime.progress} onClose={() => setIsCollectionOpen(false)} />
         <AchievementsPanel isOpen={isAchievementsOpen} achievements={achievementsState} onClose={() => setIsAchievementsOpen(false)} />
-        <Wardrobe isOpen={isWardrobeOpen} currentOutfitId={settings.outfitOverride ?? 'auto'} achievements={achievementsState} totalCats={achievementsState?.totalCaught ?? 0} completedLevels={completedLevels} onSelect={(id) => { setSettings((s) => ({ ...s, outfitOverride: id })); setIsWardrobeOpen(false); }} onClose={() => setIsWardrobeOpen(false)} />
+        <Wardrobe isOpen={isWardrobeOpen} currentOutfitId={settings.outfitOverride ?? 'auto'} achievements={achievementsState} totalCats={achievementsState?.totalCaught ?? 0} completedLevels={completedLevels} purchasedOutfitIds={settings.purchasedOutfitIds ?? []} onSelect={(id) => { setSettings((s) => ({ ...s, outfitOverride: id })); setIsWardrobeOpen(false); }} onClose={() => setIsWardrobeOpen(false)} />
+        <ShopPanel isOpen={isShopOpen} settings={settings} completedLevels={completedLevels} currentOutfitId={settings.outfitOverride ?? 'auto'} currentCharacterId={activeCharacter.id} onBuy={onShopBuy} onEquip={(id) => { setSettings((s) => ({ ...s, outfitOverride: id })); showFeedback('👗 Outfit equipado'); }} onBuyCharacter={onShopBuyCharacter} onEquipCharacter={(id) => { setSettings((s) => ({ ...s, selectedCharacterId: id })); showFeedback('🦸 Personaje elegido'); }} onBuyAccessory={onShopBuyAccessory} onEquipAccessory={(id) => { setSettings((s) => ({ ...s, equippedAccessoryId: id })); showFeedback(id ? '✨ Aura equipada' : 'Aura guardada'); }} onClose={() => setIsShopOpen(false)} />
+        <CharacterSelectPanel isOpen={isCharactersOpen} currentCharacterId={activeCharacter.id} completedLevels={completedLevels} purchasedCharacterIds={settings.purchasedCharacterIds ?? []} onSelect={(id) => { setSettings((s) => ({ ...s, selectedCharacterId: id })); setIsCharactersOpen(false); showFeedback('✨ Personaje seleccionado'); }} onClose={() => setIsCharactersOpen(false)} />
         <MultiplayerLobby
           isOpen={isMultiplayerOpen}
           status={mpStatus}
           roomCode={mpRoomCode}
           playersCount={remotePlayers.length}
-          onCreateRoom={async () => { const sess = new PeerSession({ onPlayerJoin: () => showFeedback('👋 Jugador conectado'), onPlayerLeave: () => showFeedback('👋 Jugador desconectado'), onMessage: () => {}, onStatus: setMpStatus }); const { roomCode } = await sess.createRoom(); setMpSession(sess); setMpRoomCode(roomCode); sess.sendHello({ name: 'Sarita', color: activeOutfit?.hatColor, outfitId: settings.outfitOverride ?? 'auto' }); }}
-          onJoinRoom={async (code) => { const sess = new PeerSession({ onPlayerJoin: () => showFeedback('✨ Conectado al host'), onPlayerLeave: () => showFeedback('Host desconectado'), onMessage: () => {}, onStatus: setMpStatus }); await sess.joinRoom(code); setMpSession(sess); setMpRoomCode(code); sess.sendHello({ name: 'Sarita', color: activeOutfit?.hatColor, outfitId: settings.outfitOverride ?? 'auto' }); }}
+          onCreateRoom={async () => { const sess = new PeerSession({ onPlayerJoin: () => showFeedback('👋 Jugador conectado'), onPlayerLeave: () => showFeedback('👋 Jugador desconectado'), onMessage: onMpMessage, onStatus: setMpStatus }); const { roomCode } = await sess.createRoom(); setMpSession(sess); setMpRoomCode(roomCode); sess.sendHello({ name: activeCharacter.name, color: playerLook.hatColor, outfitId: settings.outfitOverride ?? 'auto', outfitColor: playerLook.dressColor, hatColor: playerLook.hatColor, characterId: activeCharacter.id, auraColor: playerLook.auraColor }); }}
+          onJoinRoom={async (code) => { const sess = new PeerSession({ onPlayerJoin: () => showFeedback('✨ Conectado al host'), onPlayerLeave: () => showFeedback('Host desconectado'), onMessage: onMpMessage, onStatus: setMpStatus }); await sess.joinRoom(code); setMpSession(sess); setMpRoomCode(code); sess.sendHello({ name: activeCharacter.name, color: playerLook.hatColor, outfitId: settings.outfitOverride ?? 'auto', outfitColor: playerLook.dressColor, hatColor: playerLook.hatColor, characterId: activeCharacter.id, auraColor: playerLook.auraColor }); }}
           onClose={() => setIsMultiplayerOpen(false)}
         />
         <DifficultySelector isOpen={isDifficultyOpen} current={runtime.difficulty} allCompleted={false} onSelect={(diff) => { runtime.setDifficulty(diff); setSettings((s) => ({ ...s, difficulty: diff })); setIsDifficultyOpen(false); }} onClose={() => setIsDifficultyOpen(false)} />
@@ -378,15 +505,26 @@ export default function CatHunt3D() {
         mapRadius={110}
         lowQuality={settings.graphicsQuality === 'low'}
         graphicsProfile={graphicsProfile}
-        outfitColor={activeOutfit?.dressColor}
-        hatColor={activeOutfit?.hatColor}
+        outfitColor={playerLook.dressColor}
+        hatColor={playerLook.hatColor}
+        auraColor={playerLook.auraColor}
+        characterId={activeCharacter.id}
         remotePlayers={remotePlayers}
+        onPropInteract={onPropInteract}
+        openedChestsRef={openedChestsRef}
+        onVehicleEnd={onVehicleEnd}
+        checkpoints={runtime.checkpoints ?? []}
+        checkpointsHit={runtime.missionState?.checkpointsHit ?? []}
+        onCheckpointHit={onCheckpointHit}
+        onNeedVehicle={onNeedVehicle}
+        questPhase={runtime.missionState?.quest?.phase ?? 'collect'}
+        onQuestZoneReached={onQuestZoneReached}
         enemyCount={(DIFFICULTY_ENEMY_COUNT[runtime.difficulty] ?? 1) + missionEnemyBonus}
         onEnemyHit={() => { runtime.takeDamage?.(); haptic.fail(); }}
         onPowerUpCollect={onPowerUpCollect}
         invulnUntilRef={invulnUntilRef}
         onNearestCatChange={(catId, distance) => runtime.setNearestCat({ catId, distance })}
-        runtimeKey={`${runtime.worldId}-${runtime.levelId}-${runtime.totalCats}-${missionType}`}
+        runtimeKey={`${runtime.worldId}-${runtime.levelId}-${runtime.totalCats}-${missionType}-${runtime.levelNonce ?? 0}`}
         bells={runtime.bells ?? []}
         activatedBellIds={runtime.missionState?.activatedBellIds ?? []}
         onBellActivate={(bellId) => { runtime.activateBell?.(bellId); haptic.success(); showFeedback('🔔 Campanita activada'); }}

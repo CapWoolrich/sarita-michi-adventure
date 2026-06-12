@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import ChibiDoll from './ChibiDoll';
+import CharacterAccessories from './premium/CharacterAccessories';
 
 const CHARACTER_MODEL_FORWARD_OFFSET = 0;
 const CHARACTER_MODEL_SCALE = 1;
@@ -11,6 +12,8 @@ export default function CharacterSarita3D({
   isMoving,
   outfitColor = null,
   hatColor = null,
+  auraColor = null,
+  characterId = 'sarita',
   ...props
 }) {
   const animation = animState === 'run' || animState === 'walk' || isMoving ? 'walk' : 'idle';
@@ -22,6 +25,13 @@ export default function CharacterSarita3D({
         <meshBasicMaterial color="#000000" transparent opacity={0.18} />
       </mesh>
 
+      {auraColor && (
+        <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.58, 0.8, 28]} />
+          <meshBasicMaterial color={auraColor} transparent opacity={0.45} toneMapped={false} />
+        </mesh>
+      )}
+
       <Suspense fallback={null}>
         <ChibiDoll
           animation={animation}
@@ -32,6 +42,8 @@ export default function CharacterSarita3D({
           hatColor={hatColor}
         />
       </Suspense>
+
+      <CharacterAccessories characterId={characterId} />
     </group>
   );
 }

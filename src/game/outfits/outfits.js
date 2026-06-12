@@ -43,8 +43,9 @@ export function getCompletedLevelCount(progress) {
   return Object.values(progress?.levels ?? {}).filter((level) => level?.completed).length;
 }
 
-export function isOutfitUnlocked(outfit, achievements, totalCats = 0, completedLevels = 0) {
+export function isOutfitUnlocked(outfit, achievements, totalCats = 0, completedLevels = 0, purchasedOutfitIds = []) {
   if (!outfit?.unlock || outfit.unlock === 'free') return true;
+  if (purchasedOutfitIds.includes(outfit.id)) return true;
   if (outfit.unlock.startsWith('levels:')) return completedLevels >= getUnlockLevel(outfit);
   if (outfit.unlock.startsWith('achievement:')) {
     const id = outfit.unlock.split(':')[1];
@@ -67,13 +68,14 @@ export function getUnlockedOutfits(achievements, totalCats = 0, completedLevels 
 
 export function resolveActiveOutfit(settings, biomeTheme, achievements, completedLevels = 0) {
   const totalCats = achievements?.totalCaught ?? 0;
+  const purchased = settings?.purchasedOutfitIds ?? [];
   const override = settings?.outfitOverride;
   if (override && override !== 'auto') {
     const o = getOutfitById(override);
-    if (isOutfitUnlocked(o, achievements, totalCats, completedLevels)) return o;
+    if (isOutfitUnlocked(o, achievements, totalCats, completedLevels, purchased)) return o;
   }
   const autoId = BIOME_OUTFITS[biomeTheme] ?? 'default';
   const autoOutfit = getOutfitById(autoId);
-  if (isOutfitUnlocked(autoOutfit, achievements, totalCats, completedLevels)) return autoOutfit;
+  if (isOutfitUnlocked(autoOutfit, achievements, totalCats, completedLevels, purchased)) return autoOutfit;
   return OUTFITS[0];
 }
